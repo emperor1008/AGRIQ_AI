@@ -1,0 +1,14 @@
+Flask>=3.0,<4
+flask-limiter>=3.7,<5
+flask-sqlalchemy>=3.1,<4
+alembic>=1.13,<2
+cachetools>=5.3,<6
+requests>=2.31,<3
+Pillow>=10,<13
+gunicorn>=22,<24
+SQLAlchemy>=2.0,<3
+psycopg2-binary>=2.9,<3 ; sys_platform != "win32" or python_version < "3.13"
+
+# Development / testing
+pytest>=8,<10
+flake8>=7,<8

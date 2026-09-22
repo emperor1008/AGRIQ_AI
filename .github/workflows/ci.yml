@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/api/requirements.txt
+
+      - name: Python syntax check
+        run: python -m compileall -q apps/api/agriq apps/api/tests
+
+      - name: Lint (import hygiene via compile + basic flake rules)
+        run: |
+          pip install flake8
+          flake8 apps/api/agriq --select=F,E9 --max-line-length=120
+
+      - name: Secret scan
+        run: |
+          python - <<'EOF'
+          import re, sys
+          from pathlib import Path
+          pattern = re.compile(r"(AIza[0-9A-Za-z_\-]{20,}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,})")
+          hits = []
+          for base in ("apps/api/agriq", "apps/web/static", "scripts"):
+              for path in Path(base).rglob("*"):
+                  if path.is_file() and path.suffix in {".py", ".js", ".json", ".html", ".css"}:
+                      if pattern.search(path.read_text(encoding="utf-8", errors="ignore")):
+                          hits.append(str(path))
+          if hits:
+              print("SECRET-LIKE TOKENS FOUND:", hits)
+              sys.exit(1)
+          print("Secret scan clean.")
+          EOF
+
+      - name: Project validation
+        run: python scripts/validate_project.py
+
+      - name: Environment check
+        run: python scripts/check_environment.py
+        env:
+          AGRIQ_SECRET_KEY: ci-test-secret-not-for-production
+
+      - name: Migration test (real Alembic chain)
+        run: |
+          cd apps/api
+          python - <<'EOF'
+          import tempfile, os
+          from pathlib import Path
+          db = Path(tempfile.gettempdir()) / "ci_mig_check.db"
+          db.touch()
+          os.environ["DATABASE_URL"] = f"sqlite:///{db.as_posix()}"
+          import sys
+          sys.path.insert(0, ".")
+          from alembic import command
+          from alembic.config import Config
+          cfg = Config("alembic.ini")
+          cfg.set_main_option("script_location", "migrations")
+          command.upgrade(cfg, "head")
+          command.downgrade(cfg, "base")
+          print("Migration chain OK.")
+          EOF
+
+      - name: Unit tests
+        run: python scripts/run_tests.py unit
+        env:
+          AGRIQ_SECRET_KEY: ci-test-secret-not-for-production
+
+      - name: Integration + security tests
+        run: python scripts/run_tests.py integration
+        env:
+          AGRIQ_SECRET_KEY: ci-test-secret-not-for-production
+
+      - name: Full test suite
+        run: python scripts/run_tests.py
+        env:
+          AGRIQ_SECRET_KEY: ci-test-secret-not-for-production

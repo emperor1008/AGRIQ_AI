@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="center-page">
+    <div class="choose-box glass">
+        <div class="choose-title">Choose Your <span class="green-text">Workspace</span></div>
+        <p class="subtitle">Logged in as: {{ user_contact }}</p>
+        {% if error %}<p class="subtitle" style="color:#991b1b">{{ error }}</p>{% endif %}
+
+        <div class="mode-grid">
+            <div class="mode-card slide-left">
+                <div class="mode-icon">🌾</div>
+                <h2>Smart Farm Command Center</h2>
+                <p>District risk map, LeafScan visual symptoms, growth-stage intelligence, yield impact, Digital Farm Twin and English + Odia action advisory.</p>
+                <form method="POST" action="/choose-mode">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+                    <input type="hidden" name="mode" value="farmer">
+                    <button type="submit">Enter Farm Workspace</button>
+                </form>
+            </div>
+
+            <div class="mode-card slide-right">
+                <div class="mode-icon">🎓</div>
+                <h2>Agricultural Research Laboratory</h2>
+                <p>Practical notes, GIS concepts, plant protection, soil science, engineering, economics and viva-ready agriculture explanations.</p>
+                <form method="POST" action="/choose-mode">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+                    <input type="hidden" name="mode" value="student">
+                    <button class="student-btn" type="submit">Enter Research Lab</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

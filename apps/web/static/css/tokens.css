@@ -1,0 +1,64 @@
+/*
+ * AGRIQ AI — Design tokens.
+ * Extracted verbatim from the legacy style.css during the architecture
+ * refactor. Values MUST NOT change: they define the premium mint/leaf-green
+ * palette and shared shadows/lines used across every component module.
+ */
+
+*{
+    box-sizing:border-box;
+}
+
+:root{
+    --bg:#f4fbf5;
+    --bg2:#e9f8ee;
+    --card:rgba(255,255,255,.78);
+    --card2:rgba(240,253,244,.78);
+    --text:#10251a;
+    --muted:#64786b;
+    --deep:#052e1a;
+    --green:#16a34a;
+    --green2:#22c55e;
+    --emerald:#10b981;
+    --mint:#bbf7d0;
+    --lime:#84cc16;
+    --gold:#f59e0b;
+    --red:#ef4444;
+    --orange:#f97316;
+    --yellow:#eab308;
+    --blue:#0284c7;
+    --line:rgba(22,163,74,.16);
+    --line2:rgba(16,185,129,.28);
+    --shadow:0 22px 70px rgba(15,118,110,.14);
+    --neon:0 0 0 1px rgba(34,197,94,.20),0 0 34px rgba(34,197,94,.24),0 24px 70px rgba(15,118,110,.16);
+}
+
+html{
+    scroll-behavior:smooth;
+}
+
+body{
+    margin:0;
+    min-height:100vh;
+    color:var(--text);
+    font-family:Inter,Poppins,Segoe UI,Arial,sans-serif;
+    background:
+        radial-gradient(circle at 9% 5%, rgba(34,197,94,.18), transparent 30%),
+        radial-gradient(circle at 92% 8%, rgba(132,204,22,.16), transparent 29%),
+        radial-gradient(circle at 48% 90%, rgba(16,185,129,.12), transparent 38%),
+        linear-gradient(135deg,#f7fff9 0%, #edf9f0 44%, #e6f7ee 100%);
+    overflow-x:hidden;
+}
+
+body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    background-image:
+        linear-gradient(rgba(20,83,45,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(20,83,45,.045) 1px, transparent 1px);
+    background-size:46px 46px;
+    mask-image:linear-gradient(to bottom,#000,transparent 90%);
+    z-index:-1;
+}

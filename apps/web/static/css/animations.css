@@ -1,0 +1,19 @@
+/*
+ * AGRIQ AI — Entrance/splash animations.
+ *
+ * The keyframes themselves live next to the components that use them
+ * (preserving the exact cascade order of the original stylesheet), so this
+ * module documents motion rules and centralises the reduced-motion
+ * accessibility guard required by 04_FRONTEND_SPECIFICATION.md.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

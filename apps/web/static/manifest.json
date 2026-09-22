@@ -1,0 +1,17 @@
+{
+  "name": "AGRIQ AI — Smart Agriculture, Brighter Tomorrows",
+  "short_name": "AGRIQ AI",
+  "description": "Geospatial crop risk, productivity and farmer advisory intelligence for Odisha.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4fbf5",
+  "theme_color": "#16a34a",
+  "icons": [
+    {
+      "src": "/static/images/agriq-ai-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

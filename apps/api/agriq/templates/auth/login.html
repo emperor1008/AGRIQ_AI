@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="center-page">
+    <div class="login-box glass slide-up">
+        <div class="brand-mark">🌾</div>
+        <div class="login-logo AGRIQ-glow">AGRIQ AI</div>
+        <p class="subtitle">Geospatial crop risk, productivity and farmer advisory intelligence.</p>
+        {% if error %}<p class="subtitle" style="color:#991b1b">{{ error }}</p>{% endif %}
+        {% if success %}<p class="subtitle" style="color:#166534">{{ success }}</p>{% endif %}
+        <form method="POST" action="/login">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+            <label>Email or Phone Number</label>
+            <input type="text" name="user_contact" placeholder="Enter email or phone number" required>
+            <label>Password</label>
+            <input type="password" name="password" placeholder="Enter your password" minlength="8" required>
+            <div id="register-fields" style="display:none">
+                <label>Confirm Password</label>
+                <input type="password" name="password_confirm" placeholder="Repeat the password" minlength="8">
+            </div>
+            <button type="submit" id="login-submit">Sign In Securely</button>
+        </form>
+        <p class="subtitle" style="margin-top:10px">
+            <button type="button" id="toggle-register" class="link-button">New to AGRIQ AI? Create an account</button>
+        </p>
+    </div>
+</div>
+<script>
+    (function () {
+        var toggle = document.getElementById('toggle-register');
+        var extra = document.getElementById('register-fields');
+        var submit = document.getElementById('login-submit');
+        var confirmInput = extra.querySelector('input');
+        if (!toggle || !extra) return;
+        toggle.addEventListener('click', function () {
+            var showing = extra.style.display !== 'none';
+            extra.style.display = showing ? 'none' : 'block';
+            confirmInput.required = !showing;
+            submit.textContent = showing ? 'Sign In Securely' : 'Create Account & Sign In';
+            toggle.textContent = showing ? 'New to AGRIQ AI? Create an account' : 'Already registered? Sign in';
+        });
+    })();
+</script>
+{% endblock %}

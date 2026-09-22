@@ -1,0 +1,28 @@
+{
+  "_comment": [
+    "AGRIQ knowledge source manifest (template).",
+    "Add ONLY documents whose organisation is in the ingestion allowlist",
+    "(ICAR, Govt. of Odisha Dept. of Agriculture, OUAT, KVK Odisha,",
+    "Govt. of India / Ministry of Agriculture).",
+    "Every entry must carry real, verifiable metadata — no placeholders in",
+    "production. Entries ingest as pending_review; a human reviewer must",
+    "approve them before retrieval can use them.",
+    "Replace the example entry's URL with a real official document URL",
+    "before running the ingestion CLI."
+  ],
+  "sources": [
+    {
+      "source_key": "icar_rice_advisory_example",
+      "title": "EXAMPLE — Replace with the real publication title",
+      "organisation": "ICAR",
+      "source_url": "https://example.org/replace-with-official-document-url",
+      "document_type": "advisory",
+      "crop": "Rice",
+      "region": "Odisha",
+      "language": "en",
+      "publication_date": null,
+      "licence_note": "Verify and record the licence/usage terms of the actual document.",
+      "document_version": "1"
+    }
+  ]
+}

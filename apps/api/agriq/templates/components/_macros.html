@@ -1,0 +1,239 @@
+{% macro side_rail(user_mode) %}
+<aside class="side-rail {% if user_mode == 'student' %}student-rail{% else %}farmer-rail{% endif %}">
+    <div class="rail-logo">{% if user_mode == "student" %}🎓{% else %}🌾{% endif %}</div>
+    {% if user_mode == "farmer" %}
+    <a href="#map" title="GeoRisk Map">🗺️</a>
+    <a href="#farmInput" title="Farm Input">⌨️</a>
+    <a href="#intelligence" title="Farm Intelligence">🧠</a>
+    <a href="#weatherConsole" title="Weather Forecast">🌦️</a>
+    <a href="#treatmentConsole" title="Treatment Console">🛡️</a>
+    <a href="#advisor" title="Farmer Assistant">💬</a>
+    {% else %}
+    <a href="#studentInput" title="Academic Input">📝</a>
+    <a href="#materialsHub" title="Semester Materials">📚</a>
+    <a href="#researchToolkit" title="Research Toolkit">🔬</a>
+    <a href="#basicKnowledge" title="Basic Agriculture Knowledge">🌿</a>
+    <a href="#calculatorHub" title="Useful Calculators">🧮</a>
+    <a href="#careerHub" title="Career & Exams">🎯</a>
+    <a href="#examPrep" title="Exam Preparation">✅</a>
+    <a href="#advisor" title="Research Assistant">💬</a>
+    {% endif %}
+    <a href="/logout" title="Logout">⏻</a>
+</aside>
+{% endmacro %}
+
+{% macro topbar(user_mode, engine_mode, time) %}
+<header class="topbar">
+    <div>
+        <div class="brand AGRIQ-glow">🌾 AGRIQ AI</div>
+        <div class="brand-sub">Odisha Crop Intelligence Command Center</div>
+    </div>
+    <div class="top-actions">
+        <div class="pill">{{ engine_mode }}</div>
+        <div class="pill">{% if user_mode == "farmer" %}🌾 Farm Command{% else %}🎓 Research Lab{% endif %}</div>
+        <div class="pill">{{ time }}</div>
+        <a class="logout" href="/logout">Logout</a>
+    </div>
+</header>
+{% endmacro %}
+
+{% macro product_hero(user_mode, analysis, student) %}
+<section class="product-hero">
+    <div>
+        <span class="hero-eyebrow">Predict risk. Explain causes. Protect yield.</span>
+        <h1>{% if user_mode == "farmer" %}From crop risk to farmer action — in one intelligent map.{% else %}Agriculture learning connected with field decision logic.{% endif %}</h1>
+        <p>{% if user_mode == "farmer" %}Analyze district, crop, growth stage, field condition and optional leaf image to generate a focused farm intelligence report.{% else %}Select semester, domain and need to generate notes, research guides, calculators, MCQs, viva and career direction.{% endif %}</p>
+    </div>
+    <div class="hero-signal">
+        <div class="signal-dot"></div>
+        <span>{% if analysis %}{{ analysis.status }} • {{ analysis.urgency }}{% elif student %}Research Workspace Active{% else %}Ready for Analysis{% endif %}</span>
+    </div>
+</section>
+{% endmacro %}
+
+{% macro section_launcher(user_mode) %}
+<nav class="section-launcher glass-panel" aria-label="Quick section opener">
+    {% if user_mode == "farmer" %}
+    <a href="#map">🗺️<span>Map</span></a>
+    <a href="#farmInput">⌨️<span>Input</span></a>
+    <a href="#weatherConsole">🌦️<span>Weather</span></a>
+    <a href="#treatmentConsole">🛡️<span>Treatment</span></a>
+    <a href="#advisor">💬<span>Doubt Solver</span></a>
+    {% else %}
+    <a href="#studentInput">📝<span>Input</span></a>
+    <a href="#materialsHub">📚<span>Materials</span></a>
+    <a href="#researchToolkit">🔬<span>Research</span></a>
+    <a href="#basicKnowledge">🌿<span>Knowledge</span></a>
+    <a href="#calculatorHub">🧮<span>Calculators</span></a>
+    <a href="#careerHub">🎯<span>Career</span></a>
+    <a href="#advisor">💬<span>Doubt Solver</span></a>
+    {% endif %}
+</nav>
+{% endmacro %}
+
+{% macro dropdown_card(card, loop_index, mcq_variant=False) %}
+<details class="dropdown-card" id="{{ card.anchor }}" {% if loop_index == 1 %}open{% endif %}>
+    <summary>
+        <span>{{ card.title }}</span>
+        <small>{{ card.badge }}</small>
+    </summary>
+    <div class="dropdown-content">
+        {% if card.get('image') %}<img class="leaf-preview" src="data:image/jpeg;base64,{{ card.get('image') }}" alt="Uploaded leaf preview">{% endif %}
+        {% for p in card.get('paragraphs', []) %}<p>{{ p }}</p>{% endfor %}
+        {% if card.get('rows') %}
+        <div class="scroll-table"><table class="mini-table">
+            {% for row in card.get('rows', []) %}<tr><td><b>{{ row.left or row.factor }}</b></td><td>{{ row.right or row.detail }}</td></tr>{% endfor %}
+        </table></div>
+        {% endif %}
+        {% if card.get('items') %}<ol class="timeline-list">{% for item in card.get('items', []) %}<li>{{ item }}</li>{% endfor %}</ol>{% endif %}
+        {% if card.get('mcqs') %}
+        <div class="mcq-grid mcq-option-grid">
+            {% for mcq in card.get('mcqs', []) %}
+            <article class="mcq-card dropdown-mcq-card">
+                <b>{{ loop.index }}. {{ mcq.q }}</b>
+                <ol class="mcq-options">
+                    {% for opt in mcq.get('option_rows', []) %}<li><b>{{ opt.label }}.</b> {{ opt.text }}</li>{% endfor %}
+                </ol>
+                <span>Answer: {{ mcq.answer }}</span>
+                <p>{{ mcq.explain }}</p>
+            </article>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if card.get('calculator') %}
+        <div class="calculator-grid">
+            <article class="calc-card">
+                <h4>Fertilizer Dose Calculator</h4>
+                <label>Nutrient required (kg)</label><input type="number" id="nutrientKg" value="60" min="0" step="0.1">
+                <label>Fertilizer nutrient %</label><input type="number" id="nutrientPct" value="46" min="1" step="0.1">
+                <button type="button" class="ghost-btn" onclick="calcFertilizerDose()">Calculate</button>
+                <strong id="fertilizerResult">Result will appear here</strong>
+            </article>
+            <article class="calc-card">
+                <h4>Seed Rate Calculator</h4>
+                <label>Recommended seed rate (kg/ha)</label><input type="number" id="baseSeedRate" value="40" min="0" step="0.1">
+                <label>Germination %</label><input type="number" id="germinationPct" value="80" min="1" max="100" step="0.1">
+                <button type="button" class="ghost-btn" onclick="calcSeedRate()">Calculate</button>
+                <strong id="seedRateResult">Result will appear here</strong>
+            </article>
+            <article class="calc-card">
+                <h4>Unit Converter</h4>
+                <label>Value</label><input type="number" id="unitValue" value="1" step="0.01">
+                <label>Convert</label><select id="unitType"><option value="ha_acre">Hectare to Acre</option><option value="acre_ha">Acre to Hectare</option><option value="q_kg">Quintal to Kg</option><option value="mm_litre_ha">Rain mm over 1 ha to Litres</option></select>
+                <button type="button" class="ghost-btn" onclick="convertUnit()">Convert</button>
+                <strong id="unitResult">Result will appear here</strong>
+            </article>
+        </div>
+        <p class="clean-note">Educational calculator only. Use soil test and official recommendations for real field application.</p>
+        {% endif %}
+        {% if card.get('career_paths') %}
+        <div class="career-grid">
+            {% for path in card.get('career_paths', []) %}
+            <article class="career-card"><h4>{{ path.path }}</h4><p><b>Fit:</b> {{ path.fit }}</p><p><b>Exams/routes:</b> {{ path.exams }}</p><p><b>Preparation:</b> {{ path.prep }}</p></article>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% if card.get('memory_cards') %}
+        <div class="memory-card-grid">
+            {% for mem in card.get('memory_cards', []) %}<div class="memory-card"><b>{{ mem.front }}</b><span>{{ mem.back }}</span></div>{% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</details>
+{% endmacro %}
+
+{% macro assistant_panel(user_mode) %}
+<section class="assistant-panel glass-panel" id="advisor">
+    <div class="assistant-head">
+        <div>
+            <span class="chat-orb-dot">●</span>
+            <strong>Ask AGRIQ Assistant</strong>
+            <small>{% if user_mode == "farmer" %}Farming, crop risk, treatment, weather and farmer advisory{% else %}Syllabus, pest, disease, research, calculators, career, viva and exam preparation{% endif %}</small>
+        </div>
+        {% if user_mode == "farmer" %}
+        <div class="copilot-context-chips" id="copilotContextChips" hidden>
+            <span class="pill" id="copilotCropChip" title="Active crop"></span>
+            <span class="pill" id="copilotStageChip" title="Crop stage"></span>
+            <span class="pill" id="copilotWeatherChip" title="Weather freshness"></span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if user_mode == "farmer" %}
+    <div class="copilot-controls">
+        <label class="copilot-language-label" for="copilotLanguage">Answer language</label>
+        <select id="copilotLanguage" class="copilot-language-select">
+            <option value="en">English</option>
+            <option value="hi">हिन्दी (Hindi)</option>
+            <option value="or">ଓଡ଼ିଆ (Odia)</option>
+        </select>
+        <label class="copilot-compact-toggle"><input type="checkbox" id="copilotCompactMode"> Low-data mode</label>
+    </div>
+    {% endif %}
+
+    <div class="quick-prompts">
+        {% if user_mode == "farmer" %}
+        <button type="button" onclick="quickAskAI('Why this risk?')">Why this risk?</button>
+        <button type="button" onclick="quickAskAI('What should I do today?')">Today action</button>
+        <button type="button" onclick="quickAskAI('Should I irrigate my field today?')">Irrigation</button>
+        <button type="button" onclick="quickAskAI('Natural treatment')">Natural treatment</button>
+        <button type="button" onclick="quickAskAI('Chemical treatment')">Chemical treatment</button>
+        <button type="button" onclick="quickAskAI('Odia advisory')">Odia advisory</button>
+        {% else %}
+        <button type="button" onclick="quickAskAI('Explain this topic in easy way')">Explain topic</button>
+        <button type="button" onclick="quickAskAI('Give exam answer format')">Exam answer</button>
+        <button type="button" onclick="quickAskAI('Give viva points')">Viva points</button>
+        <button type="button" onclick="quickAskAI('Give MCQs with answers')">MCQs</button>
+        <button type="button" onclick="quickAskAI('Give research methodology and statistical analysis')">Research method</button>
+        <button type="button" onclick="quickAskAI('Suggest career and exams')">Career</button>
+        {% endif %}
+    </div>
+
+    <div class="chat-body" id="chatBody">
+        <div class="bot-message">{% if user_mode == "farmer" %}Ask anything about farming, crop disease, pest, treatment, weather, fertilizer, irrigation or market decision.{% else %}Ask like ChatGPT: explain a topic, create notes, MCQs, viva points, calculator guidance, career plan or research proposal.{% endif %}</div>
+    </div>
+
+    <div class="chat-input-row">
+        <input type="text" id="chatQuestion" placeholder="Ask AGRIQ AI...">
+        <button type="button" onclick="askAGRIQAI()">Ask AI</button>
+    </div>
+
+    {% if user_mode == "farmer" %}
+    {# ---- Phase 3: voice interface (progressive; text input above remains) #}
+    <div class="voice-area" id="voiceArea">
+        <div class="voice-head">
+            <strong>🎤 Ask by voice</strong>
+            <span id="voiceOfflineIndicator" class="voice-offline" hidden>Offline — recordings will be queued, not sent</span>
+        </div>
+        <div class="voice-controls">
+            <label class="copilot-language-label" for="voiceLanguage">Voice language</label>
+            <select id="voiceLanguage" class="copilot-language-select" aria-label="Select voice language">
+                <option value="or">ଓଡ଼ିଆ (Odia)</option>
+                <option value="hi">हिन्दी (Hindi)</option>
+                <option value="en-IN" selected>English (India)</option>
+            </select>
+            <button type="button" id="voiceMicBtn" class="ghost-btn voice-mic-btn"
+                    aria-pressed="false"
+                    aria-label="Record your question with the microphone">🎤 Record</button>
+            <span id="voiceTimer" class="voice-timer" aria-label="Recording duration">0:00</span>
+            <span id="voiceStatus" class="voice-status" role="status" aria-live="polite"></span>
+        </div>
+        <audio id="voicePreview" controls hidden class="voice-preview"></audio>
+        <div class="voice-actions">
+            <button type="button" id="voiceSubmitBtn" class="ghost-btn" disabled
+                    aria-label="Submit recording for transcription">Submit recording</button>
+            <button type="button" id="voiceDeleteBtn" class="ghost-btn" disabled
+                    aria-label="Delete the recording without sending it">Delete recording</button>
+        </div>
+        <div class="voice-transcript-card" id="voiceTranscriptCard" hidden>
+            <label for="voiceTranscriptEdit">Check what we heard — edit if needed:</label>
+            <textarea id="voiceTranscriptEdit" rows="2" lang="en-IN"></textarea>
+            <span id="voiceTranscriptConfidence" class="voice-confidence"></span>
+            <button type="button" id="voiceConfirmAskBtn" class="ghost-btn"
+                    aria-label="Confirm transcript and ask the assistant">Confirm &amp; Ask</button>
+        </div>
+        <ul id="voiceQueue" class="voice-queue" aria-label="Queued recordings"></ul>
+    </div>
+    {% endif %}
+</section>
+{% endmacro %}

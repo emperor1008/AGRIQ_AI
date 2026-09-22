@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+{% from "components/_macros.html" import side_rail, topbar, product_hero, section_launcher, dropdown_card, assistant_panel %}
+
+{% block content %}
+<div class="app-shell">
+    {{ side_rail(user_mode) }}
+
+    <main class="main-stage">
+        {{ topbar(user_mode, engine_mode, time) }}
+        {{ product_hero(user_mode, analysis, student) }}
+        {{ section_launcher(user_mode) }}
+
+        {% if user_mode == "farmer" %}
+        <section class="command-grid">
+            <aside class="executive-strip slide-left">
+                <div class="mini-title">Executive Risk Summary</div>
+
+                <div class="summary-card risk-card">
+                    <span>Current Risk</span>
+                    <strong>{% if analysis %}{{ analysis.risk }}%{% else %}--{% endif %}</strong>
+                    <small>{% if analysis %}{{ analysis.status }} zone{% else %}Run analysis to activate{% endif %}</small>
+                </div>
+
+                <div class="summary-card">
+                    <span>Crop Health</span>
+                    <strong>{% if analysis %}{{ analysis.health }}%{% else %}--{% endif %}</strong>
+                    <small>Risk + symptom evidence</small>
+                </div>
+
+                <div class="summary-card">
+                    <span>Yield Protection</span>
+                    <strong>{% if analysis %}{{ analysis.productivity }}%{% else %}--{% endif %}</strong>
+                    <small>Productivity condition</small>
+                </div>
+
+                <div class="summary-card urgency-card">
+                    <span>Action Urgency</span>
+                    <strong>{% if analysis %}{{ analysis.urgency }}{% else %}Ready{% endif %}</strong>
+                    <small>{% if analysis %}{{ analysis.crop.name }} • {{ analysis.district }}{% else %}Select crop + district{% endif %}</small>
+                </div>
+            </aside>
+
+            <section class="map-wrap hero-map slide-up">
+                <div class="map-header">
+                    <div>
+                        <div class="map-title">Odisha GeoRisk Intelligence Map</div>
+                        <div class="map-sub">District-level crop disease, climate and productivity stress visualization</div>
+                    </div>
+                    <div class="map-status">● ACTIVE</div>
+                </div>
+
+                <div class="map-layer-strip">
+                    <span>🦠 Disease</span>
+                    <span>🌦️ Climate</span>
+                    <span>🌾 Yield</span>
+                    <span>📸 LeafScan</span>
+                </div>
+
+                <div id="map"></div>
+
+                <div class="risk-legend">
+                    <span><i class="legend-dot green-dot"></i>Low</span>
+                    <span><i class="legend-dot yellow-dot"></i>Moderate</span>
+                    <span><i class="legend-dot orange-dot"></i>High</span>
+                    <span><i class="legend-dot red-dot"></i>Critical</span>
+                </div>
+            </section>
+
+            <aside class="input-panel glass-panel slide-right" id="farmInput">
+                <div class="panel-head">
+                    <span class="section-kicker">Smart Farm Input</span>
+                    <h2>Analyze Farm Intelligence</h2>
+                    <p>Keep input simple. The engine adjusts risk using crop, district, growth stage, field condition and optional leaf image.</p>
+                </div>
+
+                <form method="POST" enctype="multipart/form-data" id="farmForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+                    <label>Crop / Vegetable / Fruit</label>
+                    <input list="cropList" name="crop" id="cropInput" placeholder="Example: Rice, Tomato, Mango" value="{{ selected_crop or '' }}" required>
+                    <datalist id="cropList">{% for crop in crop_names %}<option value="{{ crop }}">{% endfor %}</datalist>
+
+                    <label>Your District</label>
+                    <select name="district" id="districtSelect" required>
+                        <option value="" disabled {% if not selected_district %}selected{% endif %}>Select district</option>
+                        {% for d in districts %}
+                        <option value="{{ d }}" {% if selected_district == d %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label>Growth Stage</label>
+                    <select name="growth_stage" id="growthStageSelect">
+                        {% for stage in growth_stages %}
+                        <option value="{{ stage }}" {% if selected_stage == stage %}selected{% endif %}>{{ stage }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label>Field Condition</label>
+                    <select name="field_condition" id="fieldConditionSelect">
+                        {% for item in field_conditions %}
+                        <option value="{{ item }}" {% if selected_condition == item %}selected{% endif %}>{{ item }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <label>Leaf / Crop Photo</label>
+                    <div class="leaf-upload">
+                        <input type="file" name="leaf_photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+                        <small>Optional visual symptom support. JPG, PNG or WebP up to 5 MiB. LeafScan is a screening aid, not a diagnosis.</small>
+                    </div>
+
+                    <div class="button-grid">
+                        <button type="submit">Analyze Now</button>
+                        <button type="button" class="ghost-btn" onclick="runDemoCase()">Run Demo Case</button>
+                    </div>
+                </form>
+            </aside>
+        </section>
+
+        <section class="report-area" id="intelligence">
+            {% if not analysis %}
+            <div class="empty-state glass-panel">
+                <span class="section-kicker">Command Center Ready</span>
+                <h2>Enter crop, district and growth stage to activate AGRIQ AI</h2>
+                <p>This version keeps the premium neon interaction but uses stable explainable calculations instead of changing random values.</p>
+                <div class="winner-strip">
+                    <div class="winner-chip">GeoRisk Map</div>
+                    <div class="winner-chip">LeafScan</div>
+                    <div class="winner-chip">Growth Stage</div>
+                    <div class="winner-chip">Farm Twin</div>
+                    <div class="winner-chip">Yield Impact</div>
+                    <div class="winner-chip">Odia Advisory</div>
+                </div>
+            </div>
+            {% else %}
+            <div class="section-heading">
+                <span class="section-kicker">Farm Intelligence Report</span>
+                <h2>{{ analysis.crop.name }} / {{ analysis.crop.odia }} • {{ analysis.district }}</h2>
+                <p>{{ analysis.growth_stage }} stage • {{ analysis.field_condition }}</p>
+            </div>
+
+            <section class="weather-console premium-card" id="weatherConsole">
+                <div class="console-head">
+                    <div>
+                        <span class="section-kicker">Live Weather Console</span>
+                        <h3>🌦️ {{ analysis.weather_console.district }} Real-Time Field Weather</h3>
+                        <p>Current district weather is matched with the selected crop and field condition. The removed 12-hour strip is replaced with a cleaner live card + 7-day outlook.</p>
+                    </div>
+                    <button type="button" class="mini-refresh-btn" onclick="refreshLiveWeather()">Refresh Weather</button>
+                </div>
+
+                <div class="weather-now-grid" id="weatherNowGrid">
+                    <div class="weather-tile"><span>Temperature</span><strong>{{ analysis.weather_console.current.temp }}°C</strong><small>{{ analysis.weather_console.current.condition }}</small></div>
+                    <div class="weather-tile"><span>Humidity</span><strong>{{ analysis.weather_console.current.humidity }}%</strong><small>Leaf wetness indicator</small></div>
+                    <div class="weather-tile"><span>Rain Now</span><strong>{{ analysis.weather_console.current.rain }} mm</strong><small>Current precipitation</small></div>
+                    <div class="weather-tile"><span>Wind</span><strong>{{ analysis.weather_console.current.wind }} km/h</strong><small>Spray timing factor</small></div>
+                    <div class="weather-tile live-tile"><span>Status</span><strong>{{ analysis.weather_console.live_badge }}</strong><small>Updated {{ analysis.weather_console.updated_at }}</small></div>
+                </div>
+
+                <div class="weather-meta-card">
+                    <b>Weather time:</b> {{ analysis.weather_console.current.time }}<br>
+                    <b>Source:</b> {{ analysis.weather_console.source_note }}<br>
+                    <b>Soil & water note:</b> {{ analysis.weather_console.soil_water_note }}
+                </div>
+
+                <div class="field-alert-grid organized-alert-grid">
+                    <div><b>Field Alert</b><p id="fieldAlertText">{{ analysis.weather_console.field_alert }}</p></div>
+                    <div><b>Disease Window</b><p id="diseaseWindowText">{{ analysis.weather_console.disease_window }}</p></div>
+                    <div><b>Irrigation Note</b><p id="irrigationNoteText">{{ analysis.weather_console.irrigation_note }}</p></div>
+                    <div><b>Spray Window</b><p id="sprayWindowText">{{ analysis.weather_console.spray_window }}</p></div>
+                </div>
+
+                <h4>7-Day Weather Outlook</h4>
+                <div class="daily-weather-grid" id="dailyWeatherRows">
+                    {% for d in analysis.weather_console.daily %}
+                    <div class="daily-card">
+                        <b>{{ d.day }}</b>
+                        <span>{{ d.temp_min }}°C - {{ d.temp_max }}°C</span>
+                        <small>{{ d.rain }} mm rain • {{ d.pop }}% chance</small>
+                        <small>{{ d.condition }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="dropdown-stack farmer-dropdown-stack" aria-label="Organized farmer result cards">
+                {% for card in analysis.dropdown_sections %}
+                {{ dropdown_card(card, loop.index) }}
+                {% endfor %}
+            </section>
+            {% endif %}
+        </section>
+
+        {% else %}
+        <section class="student-dashboard" id="studyWorkspace">
+            <section class="student-lab-layout">
+                <aside class="student-control-console glass-panel" id="studentInput">
+                    <div class="panel-head">
+                        <span class="section-kicker">Academic AI Input</span>
+                        <h2>Student Research Console</h2>
+                        <p>Choose your academic level, domain and exact need. The form will automatically show only relevant fields for that subject.</p>
+                    </div>
+
+                    <form method="POST" id="studentStudyForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+                        <div class="student-form-grid advanced-student-form">
+                            <div data-field="level">
+                                <label>Academic Level</label>
+                                <select name="academic_level" id="academicLevelSelect">
+                                    {% for level in academic_levels %}<option value="{{ level }}">{{ level }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div data-field="purpose">
+                                <label>Study / Research Need</label>
+                                <select name="study_purpose" id="studyPurposeSelect">
+                                    {% for purpose in study_purposes %}<option value="{{ purpose }}">{{ purpose }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div data-field="domain">
+                                <label>Academic Domain</label>
+                                <select name="learning_area" id="studentAreaSelect" required>
+                                    {% for area in student_areas.keys() %}<option value="{{ area }}">{{ area }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div data-field="topic">
+                                <label>Syllabus / Research Topic</label>
+                                <select name="topic" id="studentTopicSelect" required></select>
+                            </div>
+                            <div data-field="plant_category">
+                                <label>Plant / Crop Category</label>
+                                <select name="plant_category" id="plantCategorySelect">
+                                    {% for category in plant_categories.keys() %}<option value="{{ category }}">{{ category }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div data-field="crop">
+                                <label>Crop / Tree / Fruit / Vegetable</label>
+                                <input list="cropList" name="crop" id="studentCropInput" placeholder="Example: Rice, Tomato, Mango, Coconut">
+                                <datalist id="cropList">{% for crop in crop_names %}<option value="{{ crop }}">{% endfor %}</datalist>
+                            </div>
+                            <div data-field="animal">
+                                <label>Animal / Fishery Focus</label>
+                                <select name="animal_species" id="animalSpeciesSelect">
+                                    {% for item in animal_species_options %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div data-field="pest">
+                                <label>Pest / Insect Focus</label>
+                                <select name="pest_focus" id="studentPestSelect"></select>
+                            </div>
+                            <div data-field="disease">
+                                <label>Disease / Disorder Focus</label>
+                                <select name="disease_focus" id="studentDiseaseSelect"></select>
+                            </div>
+                            <div data-field="soil">
+                                <label>Soil / Growing Medium</label>
+                                <select name="soil_type" id="studentSoilSelect">
+                                    {% for soil in soil_types %}<option value="{{ soil }}">{{ soil }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div data-field="method">
+                                <label>Farming / Management Method</label>
+                                <select name="farming_method" id="studentMethodSelect">
+                                    {% for method in farming_methods %}<option value="{{ method }}">{{ method }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div data-field="district">
+                                <label>Study Area / District</label>
+                                <select name="district" id="studentDistrictSelect">
+                                    {% for d in districts %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div data-field="field_problem">
+                                <label>Problem / Observation</label>
+                                <select name="field_problem" id="studentProblemSelect">
+                                    {% for item in field_problem_options %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div data-field="output_format">
+                                <label>Output Format</label>
+                                <select name="output_format" id="studentOutputSelect">
+                                    {% for item in output_formats %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div data-field="study_depth">
+                                <label>Answer Depth</label>
+                                <select name="study_depth" id="studentDepthSelect">
+                                    {% for item in study_depths %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            <div data-field="prompt" class="student-wide-field">
+                                <label>Ask Like ChatGPT / Custom Prompt</label>
+                                <textarea name="student_prompt" id="studentPromptBox" rows="4" placeholder="Example: Explain rice blast with diagram, lifecycle, exam answer and research methodology."></textarea>
+                            </div>
+                        </div>
+                        <div class="button-grid">
+                            <button type="submit" class="student-btn">Generate Study + Research Workspace</button>
+                            <button type="button" class="ghost-btn" onclick="fillStudentDemo()">Run Student Demo</button>
+                        </div>
+                    </form>
+                </aside>
+
+                <section class="report-area student-report-area">
+                    {% if not student %}
+                    <div class="empty-state glass-panel student-empty-lab">
+                        <span class="section-kicker">Research Lab Ready</span>
+                        <h2>Generate syllabus-level agriculture notes, diagrams, practical records and research plans</h2>
+                        <p>This mode is designed for agriculture students: exam preparation, viva, practical file, crop/pest/disease study, animal husbandry, GIS, soil science, horticulture, economics and research methodology.</p>
+                        <div class="winner-strip">
+                            <div class="winner-chip">Syllabus Notes</div>
+                            <div class="winner-chip">Pest Library</div>
+                            <div class="winner-chip">Disease Library</div>
+                            <div class="winner-chip">Research Methods</div>
+                            <div class="winner-chip">Research Proposal</div>
+                            <div class="winner-chip">MCQ + Viva</div>
+                            <div class="winner-chip">Calculators</div>
+                            <div class="winner-chip">Career Exams</div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="section-heading student-heading">
+                        <span class="section-kicker">AI Academic Workspace</span>
+                        <h2>{{ student.area }} • {{ student.topic }}</h2>
+                        <p>{{ student.academic_level }} • {{ student.purpose }} • {{ student.output_format }} • {{ student.study_depth }}</p>
+                    </div>
+
+                    <div class="student-summary-grid">
+                        <div class="summary-card"><span>Domain</span><strong>{{ student.area }}</strong><small>Subject-synced form and output</small></div>
+                        <div class="summary-card"><span>Focus</span><strong>{% if student.animal_mode %}{{ student.animal_species }}{% else %}{{ student.crop.name }}{% endif %}</strong><small>{{ student.plant_category if not student.animal_mode else 'Animal / Fishery' }}</small></div>
+                        <div class="summary-card"><span>Problem</span><strong>{{ student.field_problem }}</strong><small>Field observation based learning</small></div>
+                        <div class="summary-card"><span>Exam Mode</span><strong>{{ student.purpose }}</strong><small>Answer + viva + memory cards</small></div>
+                    </div>
+
+                    <section class="dropdown-stack student-dropdown-stack" aria-label="Organized student and research result cards">
+                        {% for card in student.dropdown_sections %}
+                        {{ dropdown_card(card, loop.index, mcq_variant=True) }}
+                        {% endfor %}
+                    </section>
+                    {% endif %}
+                </section>
+            </section>
+        </section>
+        {% endif %}
+
+        {% if user_mode == 'farmer' %}
+        {% include "dashboard/_farm_data.html" %}
+        {% endif %}
+
+        {{ assistant_panel(user_mode) }}
+    </main>
+</div>
+{% endblock %}

@@ -1,0 +1,279 @@
+{# Phase 1: My Farm Data section — rendered with the existing AGRIQ design
+   system (glass panels, same tokens, same motion). All values come from the
+   authenticated farmer's verified context; unavailable data shows the
+   canonical message instead of generated values. #}
+<section class="report-area farm-data-area" id="farmData">
+    <div class="section-heading">
+        <span class="section-kicker">My Farm Data</span>
+        <h2>Your farm, fields, crop cycle and observations</h2>
+        <p>Saved information stays on your account. Weather uses your field coordinates; official mandi prices appear only when the government feed returns records.</p>
+    </div>
+
+    {# ---------- Farmer profile ---------- #}
+    <section class="weather-console premium-card" data-panel="profile">
+        <div class="section-heading">
+            <span class="section-kicker">Farmer Profile</span>
+            <h3>👤 Your details</h3>
+        </div>
+        {% if context and context.farmer %}
+        <p><b>Name:</b> {{ context.farmer.full_name or 'Not provided' }} &nbsp;•&nbsp;
+           <b>Language:</b> {{ context.farmer.preferred_language or 'Not provided' }} &nbsp;•&nbsp;
+           <b>District:</b> {{ context.farmer.district or 'Not provided' }}</p>
+        {% else %}
+        <p>Profile not created yet — save your details below.</p>
+        {% endif %}
+        <form id="profileForm" class="farm-data-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+            <div class="farm-data-grid">
+                <div><label>Full name</label><input name="full_name" maxlength="150" placeholder="Example: Ramesh Pradhan"></div>
+                <div><label>Preferred language</label>
+                    <select name="preferred_language">
+                        <option value="">Select</option>
+                        <option>Odia</option><option>English</option><option>Hindi</option>
+                    </select>
+                </div>
+                <div><label>State</label><input name="state" maxlength="80" placeholder="Odisha"></div>
+                <div><label>District</label><input name="district" maxlength="80" placeholder="Cuttack"></div>
+                <div><label>Village</label><input name="village" maxlength="120" placeholder="Your village"></div>
+            </div>
+            <div class="button-grid"><button type="submit">Save Profile</button></div>
+            <p class="form-feedback" aria-live="polite"></p>
+        </form>
+    </section>
+
+    {# ---------- Farms ---------- #}
+    <section class="weather-console premium-card" data-panel="farms">
+        <div class="section-heading">
+            <span class="section-kicker">My Farms</span>
+            <h3>🏡 Farms and fields</h3>
+        </div>
+        {% if context and context.farm %}
+        <p><b>{{ context.farm.name }}</b> — {{ context.farm.district or 'district not set' }}
+           {% if context.farm.latitude is not none %}({{ context.farm.latitude }}, {{ context.farm.longitude }}){% endif %}</p>
+        {% else %}
+        <p>No farm registered yet.</p>
+        {% endif %}
+        <form id="farmForm" class="farm-data-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+            <div class="farm-data-grid">
+                <div><label>Farm name</label><input name="name" maxlength="150" placeholder="Example: North Farm" required></div>
+                <div><label>District</label><input name="district" maxlength="80" placeholder="Cuttack"></div>
+                <div><label>Village</label><input name="village" maxlength="120" placeholder="Village"></div>
+                <div><label>Latitude</label><input name="latitude" inputmode="decimal" placeholder="20.46 (tap map to fill)"></div>
+                <div><label>Longitude</label><input name="longitude" inputmode="decimal" placeholder="85.88"></div>
+                <div><label>Total area</label><input name="total_area" inputmode="decimal" placeholder="2.5"></div>
+                <div><label>Area unit</label>
+                    <select name="area_unit">
+                        <option value="">Select</option>
+                        <option>acre</option><option>hectare</option><option>bigha</option><option>katha</option>
+                    </select>
+                </div>
+                <div><label>Ownership</label>
+                    <select name="ownership_type">
+                        <option value="">Select</option>
+                        <option value="owned">owned</option><option value="leased">leased</option>
+                        <option value="shared">shared</option><option value="customary">customary</option>
+                    </select>
+                </div>
+            </div>
+            <div class="button-grid"><button type="submit">Register Farm</button></div>
+            <p class="form-feedback" aria-live="polite"></p>
+        </form>
+    </section>
+
+    {# ---------- Fields ---------- #}
+    <section class="weather-console premium-card" data-panel="fields">
+        <div class="section-heading">
+            <span class="section-kicker">Field Details</span>
+            <h3>🌾 Fields of {{ (context and context.farm and context.farm.name) or 'your farm' }}</h3>
+        </div>
+        {% if context and context.field %}
+        <p><b>{{ context.field.name }}</b>
+           {% if context.field.area is not none %}— {{ context.field.area }} {{ context.field.area_unit or '' }}{% endif %}
+           {% if context.field.latitude is not none %}({{ context.field.latitude }}, {{ context.field.longitude }}){% endif %}</p>
+        {% else %}
+        <p>No field registered yet.</p>
+        {% endif %}
+        <form id="fieldForm" class="farm-data-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+            <div class="farm-data-grid">
+                <div><label>Field name</label><input name="name" maxlength="150" placeholder="Example: Rice Field" required></div>
+                <div><label>Area</label><input name="area" inputmode="decimal" placeholder="1.2"></div>
+                <div><label>Area unit</label>
+                    <select name="area_unit"><option value="">Select</option><option>acre</option><option>hectare</option></select>
+                </div>
+                <div><label>Soil type</label><input name="soil_type" maxlength="80" placeholder="Alluvial / laterite…"></div>
+                <div><label>Irrigation type</label><input name="irrigation_type" maxlength="80" placeholder="Canal / borewell / rain-fed"></div>
+                <div><label>Latitude</label><input name="latitude" inputmode="decimal" placeholder="20.46"></div>
+                <div><label>Longitude</label><input name="longitude" inputmode="decimal" placeholder="85.88"></div>
+            </div>
+            <div class="button-grid"><button type="submit">Add Field</button></div>
+            <p class="form-feedback" aria-live="polite"></p>
+        </form>
+    </section>
+
+    {# ---------- Soil ---------- #}
+    <section class="weather-console premium-card" data-panel="soil">
+        <div class="section-heading">
+            <span class="section-kicker">Soil Information</span>
+            <h3>🧪 Soil record</h3>
+        </div>
+        {% if context and context.soil and context.soil.available %}
+        <p>
+            <b>Source:</b> {{ context.soil.source_type.replace('_',' ') }} &nbsp;•&nbsp;
+            {% if context.soil.ph is not none %}<b>pH:</b> {{ context.soil.ph }}{% else %}<b>pH:</b> unknown{% endif %} &nbsp;•&nbsp;
+            {% if context.soil.organic_carbon is not none %}<b>OC:</b> {{ context.soil.organic_carbon }}%{% else %}<b>OC:</b> unknown{% endif %}
+            {% if context.soil.message %}<br><small>{{ context.soil.message }}</small>{% endif %}
+        </p>
+        {% else %}
+        <p>No soil record yet. Enter only the values you know — missing values stay unknown.</p>
+        {% endif %}
+        <form id="soilForm" class="farm-data-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+            <div class="farm-data-grid">
+                <div><label>Source</label>
+                    <select name="source_type">
+                        <option value="farmer_entered">My own information</option>
+                        <option value="laboratory_report">Laboratory report</option>
+                        <option value="district_reference">District reference (context only)</option>
+                    </select>
+                </div>
+                <div><label>Tested on</label><input name="tested_at" type="date"></div>
+                <div><label>Laboratory name</label><input name="laboratory_name" maxlength="150" placeholder="For lab reports"></div>
+                <div><label>Report reference</label><input name="report_reference" maxlength="150" placeholder="Lab report number"></div>
+                <div><label>pH</label><input name="ph" inputmode="decimal" placeholder="unknown if not tested"></div>
+                <div><label>Organic carbon %</label><input name="organic_carbon" inputmode="decimal"></div>
+                <div><label>Nitrogen</label><input name="nitrogen" inputmode="decimal"></div>
+                <div><label>Phosphorus</label><input name="phosphorus" inputmode="decimal"></div>
+                <div><label>Potassium</label><input name="potassium" inputmode="decimal"></div>
+                <div class="farm-data-wide"><label>Report document (PDF/JPG/PNG, optional)</label>
+                    <input type="file" name="report_document" accept=".pdf,.jpg,.jpeg,.png"></div>
+            </div>
+            <div class="button-grid"><button type="submit">Save Soil Record</button></div>
+            <p class="form-feedback" aria-live="polite"></p>
+        </form>
+    </section>
+
+    {# ---------- Crop cycle + stage confirmation ---------- #}
+    <section class="weather-console premium-card" data-panel="cycle">
+        <div class="section-heading">
+            <span class="section-kicker">Active Crop Cycle</span>
+            <h3>🌱 Current crop</h3>
+        </div>
+        {% if context and context.crop_cycle %}
+        <p>
+            <b>{{ context.crop_cycle.crop }}</b>{% if context.crop_cycle.variety %} ({{ context.crop_cycle.variety }}){% endif %}
+            — sown {{ context.crop_cycle.sowing_date or 'date not set' }}<br>
+            <b>Calculated stage:</b> {{ context.crop_cycle.calculated_stage or 'reference unavailable — please select' }}
+            <small>{{ context.crop_cycle.calculated_stage_reason or '' }}</small><br>
+            <b>Your confirmed stage:</b> {{ context.crop_cycle.farmer_confirmed_stage or 'not confirmed yet' }}
+        </p>
+        <form id="stageForm" class="farm-data-form" data-cycle-id="{{ context.crop_cycle.active_id or context.crop_cycle.id }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+            <div class="farm-data-grid">
+                <div><label>Confirm / correct stage</label>
+                    <select name="stage">
+                        {% for stage in growth_stages %}<option value="{{ stage }}">{{ stage }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="button-grid"><button type="submit">Confirm Stage</button></div>
+            <p class="form-feedback" aria-live="polite"></p>
+        </form>
+        {% else %}
+        <form id="cycleForm" class="farm-data-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+            <div class="farm-data-grid">
+                <div><label>Crop</label><input name="crop_name" maxlength="100" placeholder="Rice" required></div>
+                <div><label>Variety</label><input name="variety" maxlength="100" placeholder="Swarna (optional)"></div>
+                <div><label>Season</label>
+                    <select name="season">
+                        <option value="">Select</option><option>Kharif</option><option>Rabi</option><option>Summer</option>
+                    </select>
+                </div>
+                <div><label>Sowing date</label><input name="sowing_date" type="date"></div>
+                <div><label>Transplanting date</label><input name="transplanting_date" type="date"></div>
+                <div><label>Expected harvest</label><input name="expected_harvest_date" type="date"></div>
+                <div><label>Previous crop</label><input name="previous_crop" maxlength="100"></div>
+            </div>
+            <div class="button-grid"><button type="submit">Start Crop Cycle</button></div>
+            <p class="form-feedback" aria-live="polite"></p>
+        </form>
+        {% endif %}
+    </section>
+
+    {# ---------- Observations / timeline ---------- #}
+    <section class="weather-console premium-card" data-panel="observations">
+        <div class="section-heading">
+            <span class="section-kicker">Field Timeline</span>
+            <h3>📸 Observations</h3>
+        </div>
+        {% if context and context.recent_observations %}
+        <ul class="obs-list">
+            {% for obs in context.recent_observations %}
+            <li>
+                <b>{{ obs.observed_at[:10] if obs.observed_at else '' }} — {{ obs.observation_type.replace('_',' ') }}</b>
+                {% if obs.field_condition %}• {{ obs.field_condition }}{% endif %}
+                {% if obs.farmer_reported_severity %}• severity: {{ obs.farmer_reported_severity }}{% endif %}
+                {% if obs.has_image %}• 📎 photo saved{% endif %}
+                {% if obs.notes %}<br><small>{{ obs.notes }}</small>{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No observations recorded yet for the active crop cycle.</p>
+        {% endif %}
+        {% if context and context.crop_cycle %}
+        <form id="observationForm" class="farm-data-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
+            <div class="farm-data-grid">
+                <div><label>Date &amp; time</label><input name="observed_at" type="datetime-local"></div>
+                <div><label>Type</label>
+                    <select name="observation_type">
+                        <option value="general">General</option>
+                        <option value="pest">Pest</option>
+                        <option value="disease_symptom">Disease symptom</option>
+                        <option value="nutrient_symptom">Nutrient symptom</option>
+                        <option value="irrigation">Irrigation</option>
+                        <option value="weather_damage">Weather damage</option>
+                        <option value="growth_update">Growth update</option>
+                        <option value="harvest_update">Harvest update</option>
+                    </select>
+                </div>
+                <div><label>Field condition</label><input name="field_condition" maxlength="120" placeholder="Example: humid, waterlogged patch"></div>
+                <div><label>Severity</label>
+                    <select name="farmer_reported_severity">
+                        <option value="">Not set</option>
+                        <option>low</option><option>moderate</option><option>high</option><option>severe</option>
+                    </select>
+                </div>
+                <div class="farm-data-wide"><label>Notes</label><textarea name="notes" rows="2" maxlength="2000"></textarea></div>
+                <div class="farm-data-wide"><label>Photo (JPG/PNG/WebP, optional)</label>
+                    <input type="file" name="image" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"></div>
+            </div>
+            <div class="button-grid"><button type="submit">Save Observation</button></div>
+            <p class="form-feedback" aria-live="polite"></p>
+        </form>
+        {% endif %}
+    </section>
+
+    {# ---------- Data source & freshness panel ---------- #}
+    <section class="weather-console premium-card" data-panel="provenance">
+        <div class="section-heading">
+            <span class="section-kicker">Data Source and Freshness</span>
+            <h3>🛰️ Where each value comes from</h3>
+        </div>
+        <div>
+            {% set weather = context.weather if context else none %}
+            <span class="data-source-chip {{ 'unavailable' if not (weather and weather.available) }}">
+                Weather: {{ weather.provider if weather and weather.available else 'Verified data is currently unavailable.' }}
+                {% if weather and weather.available %}• updated {{ weather.retrieved_at or 'recently' }}{% if weather.cached %} (cached){% endif %}{% endif %}
+            </span>
+            <span class="data-source-chip unavailable">
+                Mandi prices: {{ 'Official records shown when returned by data.gov.in.' if not (context and context.market and context.market.available) else 'Official records loaded.' }}
+            </span>
+            <span class="data-source-chip">Soil: farmer-entered or lab report — never estimated.</span>
+            <span class="data-source-chip">Map: district risk shown only after analysis; unanalysed districts await verified analysis.</span>
+        </div>
+    </section>
+</section>

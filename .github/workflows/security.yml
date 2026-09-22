@@ -1,0 +1,46 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 3 * * 1"  # weekly Monday audit
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scanners
+        run: pip install bandit pip-audit
+
+      - name: SAST (bandit)
+        run: bandit -r apps/api/agriq -x apps/api/agriq/tests -ll
+
+      - name: Dependency audit (pip-audit)
+        run: pip-audit -r apps/api/requirements.txt --ignore-vuln PYSEC-0000-0000 || true
+
+      - name: Secret scan
+        run: |
+          python - <<'PY'
+          import re, sys
+          from pathlib import Path
+          pattern = re.compile(r"(AIza[0-9A-Za-z_\-]{20,}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,})")
+          hits = []
+          for p in Path(".").rglob("*"):
+              if p.is_file() and p.suffix in {".py", ".js", ".html", ".yml", ".yaml", ".json", ".md"} \
+                 and ".git" not in p.parts and "node_modules" not in p.parts:
+                  if pattern.search(p.read_text(encoding="utf-8", errors="ignore")):
+                      hits.append(str(p))
+          if hits:
+              print("Secret-like literals found:", *hits, sep="\n  ")
+              sys.exit(1)
+          print("No secret-like literals found.")
+          PY

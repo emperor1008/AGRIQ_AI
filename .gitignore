@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Flask/SQLAlchemy local artifacts
+instance/
+*.db
+*.sqlite3
+
+# Frontend
+node_modules/
+dist/
+
+# Editors & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Freebuff workspace runtime state
+.freebuff/
+
+# ML artefacts: datasets, model weights, reports (large binaries never in Git)
+ml/data/raw/
+ml/data/validated/
+ml/data/quarantined/
+ml/data/splits/*.npz
+ml/data/splits/*.npy
+ml/data/manifests/*.npz
+ml/models/weights/
+ml/evaluation/reports/artifacts/
+ml/training/runs/

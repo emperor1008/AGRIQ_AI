@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AGRIQ AI | Crop Intelligence</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token or '' }}">
+    <meta name="theme-color" content="#16a34a">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/agriq-ai-logo.png') }}">
+
+    {% if page == "dashboard" %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    {% endif %}
+
+    <!-- CSS modules: split from the original style.css; combined result identical -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+</head>
+
+<body class="{% if page == 'login' %}auth-theme mixed-doodles{% elif page == 'choose' %}choose-theme mixed-doodles{% elif page == 'dashboard' and user_mode == 'farmer' %}farmer-theme farm-doodles{% elif page == 'dashboard' and user_mode == 'student' %}student-theme research-doodles{% endif %}">
+
+<div class="doodle-bg" aria-hidden="true">
+    <span class="doodle d1"></span>
+    <span class="doodle d2"></span>
+    <span class="doodle d3"></span>
+    <span class="doodle d4"></span>
+    <span class="doodle d5"></span>
+    <span class="doodle d6"></span>
+    <span class="doodle d7"></span>
+    <span class="doodle d8"></span>
+    <span class="doodle d9"></span>
+    <span class="doodle d10"></span>
+    <span class="doodle d11"></span>
+    <span class="doodle d12"></span>
+    <span class="doodle d13"></span>
+    <span class="doodle d14"></span>
+    <span class="doodle d15"></span>
+    <span class="doodle d16"></span>
+    <span class="doodle d17"></span>
+    <span class="doodle d18"></span>
+    <span class="doodle d19"></span>
+    <span class="doodle d20"></span>
+    <span class="doodle d21"></span>
+    <span class="doodle d22"></span>
+    <span class="doodle d23"></span>
+    <span class="doodle d24"></span>
+</div>
+
+{% block content %}{% endblock %}
+
+{% if page == "dashboard" %}
+<script>
+window.AgriqBoot = {
+    mapData: {{ map_data | tojson }},
+    hasAnalysis: {{ 'true' if analysis else 'false' }},
+    userMode: "{{ user_mode or 'farmer' }}",
+    studentDomainConfig: {{ student_domain_config | default({}) | tojson }}
+};
+</script>
+<script src="{{ url_for('static', filename='js/api-client.js') }}"></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/weather.js') }}"></script>    <script src="{{ url_for('static', filename='js/assistant.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/voice-recorder.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/voice-upload-queue.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/transcript-review.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/audio-player.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/voice-accessibility.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/voice-bindings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/leafscan.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script src="{{ url_for('static', filename='js/farmer-data.js') }}"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/pwa.js') }}"></script>
+{% endif %}
+
+</body>
+</html>

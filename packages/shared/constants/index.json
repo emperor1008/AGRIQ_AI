@@ -1,0 +1,11 @@
+{
+  "modes": { "farmer": "farmer", "student": "student" },
+  "weatherBadges": { "live": "LIVE SYNC", "offline": "OFFLINE FALLBACK" },
+  "marketProvider": "AGMARKNET via data.gov.in",
+  "riskBands": [
+    { "max": 39, "label": "LOW", "color": "green" },
+    { "max": 59, "label": "MODERATE", "color": "yellow" },
+    { "max": 79, "label": "HIGH", "color": "orange" },
+    { "max": 100, "label": "CRITICAL", "color": "red" }
+  ]
+}
