@@ -1204,3 +1204,30 @@ button:active{
 @media (prefers-reduced-motion: reduce) {
     .voice-area, .voice-transcript-card { transition: none !important; }
 }
+
+/* ---------------------------------------------------------------------------
+   Phase 4 crop-image screening additions (same tokens, same visual identity)
+--------------------------------------------------------------------------- */
+.image-area { margin-top: 10px; border-top: 1px solid var(--border-soft, rgba(22, 101, 52, 0.2)); padding-top: 10px; }
+.image-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.image-head strong { font-size: 0.9rem; }
+.image-service-status { font-size: 0.78rem; color: var(--text-muted, #4b5d52); }
+.image-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.image-file-label { cursor: pointer; display: inline-flex; align-items: center; }
+.image-preview-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+.image-preview {
+    max-width: 220px; max-height: 160px; border-radius: 12px;
+    border: 1px solid var(--border-soft, rgba(22, 101, 52, 0.25));
+    box-shadow: var(--shadow-soft, 0 6px 16px rgba(22, 101, 52, 0.08));
+}
+.image-result-card {
+    flex: 1; min-width: 220px; background: var(--surface, #ffffff);
+    border: 1px solid var(--border-soft, rgba(22, 101, 52, 0.2));
+    border-radius: 12px; padding: 10px 12px;
+    box-shadow: var(--shadow-soft, 0 6px 16px rgba(22, 101, 52, 0.08));
+}
+.image-result-status { font-weight: 600; font-size: 0.88rem; }
+.image-result-guidance { margin: 6px 0 0; padding-left: 18px; font-size: 0.8rem; color: var(--text-muted, #4b5d52); }
+.image-result-guidance li { margin: 2px 0; }
+.image-result-predictions { margin-top: 6px; font-size: 0.84rem; }
+.image-result-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }

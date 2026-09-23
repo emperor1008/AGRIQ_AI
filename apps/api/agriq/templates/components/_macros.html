@@ -234,6 +234,39 @@
         </div>
         <ul id="voiceQueue" class="voice-queue" aria-label="Queued recordings"></ul>
     </div>
+
+    {# ---- Phase 4: crop-image screening (progressive; honest unavailable state
+         is rendered by JS when no approved model is registered) #}
+    <div class="image-area" id="imageArea">
+        <div class="image-head">
+            <strong>📷 Check a leaf photo</strong>
+            <span id="imageServiceStatus" class="image-service-status" role="status" aria-live="polite"></span>
+        </div>
+        <div class="image-controls">
+            <label class="copilot-language-label" for="imageCropSelect">Crop</label>
+            <select id="imageCropSelect" class="copilot-language-select" aria-label="Select the crop in the photo">
+                <option value="rice">Rice (ଧାନ)</option>
+                <option value="tomato">Tomato (ଟମାଟୋ)</option>
+            </select>
+            <label class="image-file-label ghost-btn" for="imageFileInput">Choose photo</label>
+            <input type="file" id="imageFileInput" accept="image/jpeg,image/png,image/webp" hidden
+                   aria-label="Choose a leaf photo to check">
+        </div>
+        <div class="image-preview-row">
+            <img id="imagePreview" alt="Preview of your selected leaf photo" hidden class="image-preview">
+            <div id="imageResultCard" class="image-result-card" hidden aria-live="polite">
+                <div id="imageResultStatus" class="image-result-status"></div>
+                <div id="imageResultGuidance" class="image-result-guidance"></div>
+                <div id="imageResultPredictions" class="image-result-predictions"></div>
+                <div class="image-result-actions">
+                    <button type="button" id="imageFeedbackBtn" class="ghost-btn" hidden
+                            aria-label="Tell AGRIQ whether this result was helpful">This helped / not helpful</button>
+                    <button type="button" id="imageExpertBtn" class="ghost-btn" hidden
+                            aria-label="Request expert review of this result">Ask an expert to review</button>
+                </div>
+            </div>
+        </div>
+    </div>
     {% endif %}
 </section>
 {% endmacro %}

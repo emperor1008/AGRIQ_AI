@@ -89,13 +89,15 @@ def calculate_stage(
     windows = windows_for(crop_key)
 
     if windows is None:
+        # Plain string concatenation of validated names — no SQL involved.
+        # bandit B608 flags the literal ". Please select…" fragment; suppressed.
+        reason_text = (
+            f"Calendar reference is not available for {crop['name']}"
+            + (f" (variety {variety})" if variety else "")
+        )
         return StageResult(
             calculated_stage=None,
-            reason=(
-                f"Calendar reference is not available for {crop['name']}"
-                + (f" (variety {variety})" if variety else "")
-                + ". Please select the current stage from the field."
-            ),
+            reason=reason_text + ". Please select the current stage from the field.",  # nosec B608 — string building, not SQL
             reference_version=None,
             farmer_confirmation_required=True,
             days_elapsed=(today - anchor).days,

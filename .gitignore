@@ -42,5 +42,16 @@ ml/data/splits/*.npz
 ml/data/splits/*.npy
 ml/data/manifests/*.npz
 ml/models/weights/
+ml/models/artifacts/
 ml/evaluation/reports/artifacts/
 ml/training/runs/
+
+# Private runtime storage (never public, never in Git)
+apps/api/image_store/
+apps/api/voice_audio/
+apps/api/uploads/
+
+# Test throwaway storage
+apps/api/tests/_test_uploads/
+apps/api/tests/_test_voice_audio/
+apps/api/tests/_test_image_store/

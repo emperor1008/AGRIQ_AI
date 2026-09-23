@@ -86,6 +86,19 @@ class BaseConfig:
         "DATA_GOV_IN_MARKET_RESOURCE_ID", "9ef84268-d588-465a-a308-a864a43d0070"
     ).strip()
 
+    # Phase 4 crop-image intelligence. The feature is available only when a
+    # registry-approved model exists; otherwise it reports an honest
+    # unavailable state. Images are stored privately (never public URLs).
+    IMAGE_MAX_FILE_SIZE_MB = int(os.environ.get("IMAGE_MAX_FILE_SIZE_MB", "5"))
+    IMAGE_MAX_DIMENSION = int(os.environ.get("IMAGE_MAX_DIMENSION", "6000"))
+    IMAGE_STORAGE_PATH = os.environ.get("IMAGE_STORAGE_PATH", "") or os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        "image_store",
+    )
+    IMAGE_DECODER_TIMEOUT_SECONDS = int(os.environ.get("IMAGE_DECODER_TIMEOUT_SECONDS", "10"))
+    IMAGE_MAX_PER_REQUEST = int(os.environ.get("IMAGE_MAX_PER_REQUEST", "1"))
+    IMAGE_REGISTRY_PATH = os.environ.get("IMAGE_REGISTRY_PATH", "")  # default: ml/models/registry.yaml
+
     # Uploads (soil reports, observation images) live outside the source tree.
     AGRIQ_UPLOAD_FOLDER = os.environ.get("AGRIQ_UPLOAD_FOLDER", "") or os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
@@ -160,6 +173,7 @@ class TestingConfig(BaseConfig):
     # Test uploads go to a throwaway directory inside the test tree.
     AGRIQ_UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tests", "_test_uploads")
     VOICE_TEMP_STORAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tests", "_test_voice_audio")
+    IMAGE_STORAGE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tests", "_test_image_store")
 
 
 CONFIG_BY_ENV: dict[str, type[BaseConfig]] = {

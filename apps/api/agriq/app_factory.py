@@ -48,7 +48,7 @@ def create_app(config_object=None) -> Flask:
     db.init_app(app)
 
     # Blueprints -----------------------------------------------------------
-    from .api import assistant, auth, copilot, dashboard, errors, farmer_data, health, voice, weather
+    from .api import assistant, auth, copilot, dashboard, errors, farmer_data, health, images, voice, weather
 
     app.register_blueprint(health.health_bp)
     app.register_blueprint(auth.auth_bp)
@@ -58,6 +58,7 @@ def create_app(config_object=None) -> Flask:
     app.register_blueprint(farmer_data.farmer_data_bp)
     app.register_blueprint(copilot.copilot_bp)
     app.register_blueprint(voice.voice_bp)
+    app.register_blueprint(images.image_bp)
     app.register_blueprint(errors.errors_bp)
 
     _apply_rate_limits(app)
