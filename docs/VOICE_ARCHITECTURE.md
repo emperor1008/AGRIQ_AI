@@ -1,101 +1,69 @@
-# AGRIQ AI Voice Architecture (Phase 3)
+# Voice Architecture (Phase 3)
 
-The voice layer is an **input/output interface over the existing Farm
-Copilot** — not a separate assistant. Every agricultural decision still
-flows through the Phase 2 orchestration pipeline, Shared Farmer Context
-and approved knowledge retrieval. Voice adds: audio capture → validated
-transcription → farmer-confirmed transcript → the same copilot → TTS
-playback of the written answer.
+The voice layer is an **input/output interface over the existing Phase 2 Farm Copilot** — never a separate assistant. All intelligence, ownership, knowledge retrieval and safety guardrails remain in the Copilot pipeline.
 
-Status: **implemented as described here; evaluation not yet validated**
-(see docs/VOICE_EVALUATION.md).
-
-## Pipeline
+## Request pipeline
 
 ```
-Farmer selects language (or / hi / en-IN)
-  → microphone permission (browser)
-  → record (MediaRecorder, timer, preview)
-  → POST /api/v1/voice/sessions                 (consent-gated)
-  → POST /api/v1/voice/sessions/{id}/audio      (server-side validation)
-  → GET  /api/v1/voice/sessions/{id}/transcription (ASR, never fabricates)
-  → farmer reviews/edits transcript
-  → POST /api/v1/voice/sessions/{id}/confirm    (confirmed transcript stored
-                                                 separately from raw)
-  → POST /api/v1/voice/sessions/{id}/ask        → EXISTING copilot_orchestrator
-  → written answer (always visible)
-  → POST /api/v1/voice/synthesise               (TTS of farmer-facing text)
-  → GET  /api/v1/voice/audio/{audio_id}         (owner-only streaming)
+Browser                        AGRIQ server                        Providers
+───────                        ────────────                        ─────────
+language + mic consent
+record & preview (WebM/Opus)
+   │
+voice-recorder.js ── multipart upload ──► voice.py (blueprint)
+                                          │ auth + CSRF + rate limit
+                                          ▼
+                                  audio_validation_service   (decode, limits, silence check)
+                                          ▼
+                                  voice_orchestrator         (consent → status flow)
+                                          ▼
+                                  transcription_service ───► SpeechToTextProvider
+                                          ▼                        (Bhashini →
+                                  transcript shown; farmer          IndicConformer →
+                                  edits & confirms                   Indian-English ASR)
+                                          │
+                                  POST .../confirm ──► POST .../ask
+                                          ▼
+                                  copilot_orchestrator (Phase 2)  — unchanged
+                                          ▼
+                                  answer text (+ stored message)
+                                          ▼
+                                  speech_synthesis_service ─► TextToSpeechProvider
+                                          ▼                        (Bhashini → Indic-TTS →
+                                  UI: text + audio playback         device fallback, labelled)
 ```
-
-## Module map
-
-| Layer | Module | Responsibility |
-|---|---|---|
-| API | `agriq/api/voice.py` | HTTP only: auth, CSRF, parsing, serialisation |
-| Service | `services/voice_orchestrator.py` | Pipeline state machine, provider selection, circuit breaker |
-| Service | `services/audio_validation_service.py` | Real decoding, magic-byte checks, duration/measurement, private storage |
-| Service | `services/voice_consent_service.py` | Consent gate, retention decision, revocation |
-| Service | `services/language_service.py` | Closed set {or, hi, en-IN}; never claims more |
-| Service | `services/agricultural_vocabulary.py` | Display-aid suggestions (“Did you mean …?”) |
-| Integration | `integrations/speech/*` | ASR providers behind one contract |
-| Integration | `integrations/tts/*` | TTS providers behind one contract |
-| Integration | `integrations/translation/*` | Translation providers behind one contract |
-| Repository | `repositories/voice_repository.py` | Owner-scoped persistence (get_owned everywhere) |
-| Domain | `models/voice.py` + migration 0003 | voice_consents, voice_sessions, transcripts, synthesised_audio |
 
 ## Provider abstraction
 
-Every ASR provider implements (`integrations/speech/provider.py`):
+- `integrations/speech/provider.py` — `SpeechToTextProvider` protocol: `is_configured`, `supports_language`, `transcribe`, `health_check`, `provider_metadata`.
+- `integrations/tts/provider.py` — `TextToSpeechProvider` protocol with the same shape plus `synthesise`.
+- `integrations/translation/` — Bhashini translation and IndicTrans2 adapters behind one provider interface.
 
-- `is_configured()`, `supports_language(code)`, `transcribe(audio, code)`,
-  `health_check()`, `provider_metadata()`
+Standard result contracts (see `docs/VOICE_API.md`): confidence carries `available/value/source`; when the provider does not return confidence, `available` is `false` and **no value is inferred**. TTS duration is the **actual decoded** duration, never estimated from text length.
 
-Every TTS provider implements the mirrored contract
-(`integrations/tts/provider.py`). Providers **never invent values**: an
-unconfigured or failing provider returns `status="unavailable"` with an
-error category; missing confidence stays `{"available": False, "value":
-None, "source": None}`. Confidence is stored verbatim from the provider —
-never derived from transcript length.
+Provider selection follows the mandated evaluation order (Bhashini if configured → IndicConformer → validated Indian-English ASR). Capabilities are computed from real configuration — nothing is hardcoded to available.
 
-Implemented providers (evaluation order):
+## Server modules
 
-1. **Bhashini ASR/TTS/translation** — used only when `BHASHINI_API_KEY`
-   etc. are configured.
-2. **AI4Bharat IndicConformer ASR** (Odia/Hindi) — used only when local
-   model paths are configured.
-3. **Indian-English ASR model** — used only when a model path is configured.
-4. **Device TTS** — metadata only; synthesis is browser-side and explicitly
-   labelled a fallback.
+| Module | Responsibility |
+| --- | --- |
+| `services/voice_orchestrator.py` | Session lifecycle: consent → upload → transcription → confirm → Copilot → synthesis; status transitions; retention enforcement. |
+| `services/audio_validation_service.py` | Real decoded validation (format/size/duration/sample-rate/channels), silence & corruption detection, private random storage. |
+| `services/transcription_service.py` | Provider invocation, timing capture, confidence passthrough. |
+| `services/speech_synthesis_service.py` | Answer → speakable text rules (unit expansion, no secrets/JSON), provider call, expiry tracking. |
+| `services/translation_service.py` | Optional provider translation; never translates chemical/crop names blindly. |
+| `services/language_service.py` | `or` / `hi` / `en-IN` validation and normalisation. |
+| `services/voice_consent_service.py` | Versioned consent, revocation, evaluation-use gate. |
+| `services/agricultural_vocabulary.py` | Versioned term registry (crops, varieties, stages, pests, districts) for display/search suggestions ("Did you mean: Brown Plant Hopper?"). Never silently rewrites transcripts. |
 
-With nothing configured, all capabilities honestly report
-`asr_available: false / tts_available: false` and text input remains the
-primary path. **No provider is bundled or enabled by default.**
+## Storage & data
 
-## Honesty rules enforced in code
+Tables: `voice_consents`, `voice_sessions`, `transcripts`, `synthesised_audio` (migration `0003_phase3_voice`). Raw + corrected transcripts stored separately. Audio lives in private `VOICE_TEMP_STORAGE_PATH` with random keys; deleted post-transcription unless retention is explicitly enabled.
 
-- ASR failure → `"We could not reliably understand this recording. Please
-  try again or type your question."` — never a scripted transcript.
-- TTS failure → written answer stays; `"Audio playback is currently
-  unavailable."` — never an empty audio file.
-- Session state records the **actual** provider and model used.
-- Policy pin: when `VOICE_ASR_PROVIDER` is set, no silent provider
-  switching occurs.
-- Circuit breaker: 3 consecutive ASR failures open a 2-minute cool-down.
+## Browser modules (`apps/web/static/js/`)
 
-## Data model
+`voice-recorder.js` (MediaRecorder, timer, preview/delete), `voice-upload-queue.js` (offline queue, retry, progress), `transcript-review.js` (edit/confirm), `audio-player.js` (playback of synthesised answers), `voice-accessibility.js` (labels, focus, reduced-motion, status announcements — never colour-only status). No provider keys or calls exist in browser code.
 
-- `voice_sessions` tracks status
-  `created → uploaded → processing → transcript_ready → transcript_confirmed
-  → copilot_completed`, or `failed / expired / deleted`.
-- `transcripts` keeps `raw_transcript` and `corrected_transcript`
-  separately with `correction_confirmed_at`.
-- `synthesised_audio` rows expire after the configured TTL; files live in
-  private storage (`VOICE_TEMP_STORAGE_PATH`), never under static/.
+## Failure behaviour
 
-## Retention
-
-Audio is retained only when **both** the farmer consented to retention
-and the session explicitly asked for it (`retain_audio`, default false).
-Sessions expire after 24 h; the sweep (`cleanup_expired`) flips expired
-sessions and drops their audio. See docs/VOICE_PRIVACY.md.
+Any provider failure degrades to the **text interface** with honest messaging; the written answer always precedes audio. See `docs/VOICE_API.md` for the exact user-facing strings.
