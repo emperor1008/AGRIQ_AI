@@ -44,3 +44,8 @@ ml/data/manifests/*.npz
 ml/models/weights/
 ml/evaluation/reports/artifacts/
 ml/training/runs/
+
+# Local runtime and test-generated files
+apps/api/image_store/
+apps/api/tests/_test_uploads/
+apps/api/voice_audio/
