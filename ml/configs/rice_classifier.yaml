@@ -1,0 +1,46 @@
+# AGRIQ rice image classifier configuration (Phase 4).
+# Training runs ONLY manually, and only after its dataset reaches
+# status: approved in ml/data/dataset_registry.yaml.
+
+model_id: agriq-rice-screening
+crop: rice
+architecture: mobilenet_v3_small   # lightweight CPU-friendly transfer learning
+pretrained_weights_source: "torchvision MobileNetV3-Small_Weights.IMAGENET1K_V1"
+pretrained_weights_licence: "BSD-3-Clause (torchvision)"
+input_size: 224
+classes:
+  - rice_healthy
+  - rice_blast
+  - rice_bacterial_leaf_blight
+  - rice_brown_spot
+  - unsupported
+
+training:
+  batch_size: 32
+  epochs: 30
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  early_stopping_patience: 5
+  seed: 20260923
+  augmentation:                     # applied to TRAINING split only, recorded separately
+    horizontal_flip: true
+    rotation_degrees: 15
+    brightness_jitter: 0.2
+
+calibration:
+  method: temperature_scaling       # documented method; ECE + reliability diagram recorded
+  calibration_split: val
+
+abstention:
+  max_probability_threshold: 0.55   # below this → insufficient evidence
+  top2_margin_threshold: 0.10       # top-2 too close → abstain
+  ood_energy_threshold: null        # set after OOD analysis on real data
+  min_image_quality:
+    min_dimension: 200
+    min_brightness: 35
+    max_brightness: 232
+    min_blur_score: 12
+
+export:
+  format: torchscript               # CPU-compatible export
+  opset: 17

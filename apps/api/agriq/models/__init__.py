@@ -12,6 +12,11 @@ from .voice import (  # noqa: F401
     VoiceConsent,
     VoiceSession,
 )
+from .image_analysis import (  # noqa: F401
+    ImageAnalysis,
+    ImageAnalysisFeedback,
+)
+from .risk import RiskAssessment  # noqa: F401
 from .farmer import (  # noqa: F401
     Conversation,
     CropCycle,
@@ -49,4 +54,7 @@ __all__ = [
     "VoiceSession",
     "Transcript",
     "SynthesisedAudio",
+    "ImageAnalysis",
+    "ImageAnalysisFeedback",
+    "RiskAssessment",
 ]

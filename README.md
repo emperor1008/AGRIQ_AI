@@ -3,7 +3,9 @@
 **Smart Agriculture, Brighter Tomorrows** — a mobile-first agriculture
 intelligence platform for Odisha farmers and agriculture students, built on
 a professional, scalable frontend/backend architecture with a persisted
-farmer-data foundation (Phase 1) and a personalised Farm Copilot (Phase 2).
+farmer-data foundation (Phase 1), a personalised Farm Copilot (Phase 2), a
+multilingual voice interface (Phase 3) and validated crop-image
+intelligence foundations (Phase 4).
 
 - **Farmer Mode** — real accounts, farmer profile, farms & fields, soil
   records, crop cycles with transparent stage calculation, field timeline,
@@ -17,8 +19,17 @@ farmer-data foundation (Phase 1) and a personalised Farm Copilot (Phase 2).
 - **Student/Research Mode** — syllabus notes, research plans, pest/disease
   libraries, MCQs, viva prep, calculators, career direction, AI assistant.
 
-## Phase 2 — Personalised Farm Copilot
+## Phase 4 — Crop-Image Intelligence (foundations)
 
+The image pipeline (`/api/v1/crop-images/*`, docs/IMAGE_INTELLIGENCE.md) is
+built end-to-end with a fail-closed contract: decoded-format verification,
+quality gate with retake guidance, abstention policy and registry-gated
+model loading. **No model is approved for production yet** — the feature
+honestly reports "Image analysis is not currently available." until a real
+dataset-licensed, calibrated, evaluated model is registered by a named
+approver. See `ml/README.md` for the full pipeline.
+
+## Phase 2 — Personalised Farm Copilot
 The copilot (`POST /api/v1/copilot/messages`, docs/FARM_COPILOT.md) grounds
 every answer in the authenticated farmer's verified context plus approved
 agricultural knowledge:
@@ -268,6 +279,11 @@ Full details: `docs/SECURITY_AND_ACCESS.md`.
 5. **Single-language voice** — voice I/O is out of scope for this release.
 6. **Weather fallback** is a seasonal statistical model, clearly labelled —
    it is not observed data.
+7. **Crop-image model** — pipeline is built but no model is registered as
+   approved for production; the feature reports an honest unavailable state
+   until a validated model exists (see docs/IMAGE_INTELLIGENCE.md).
+8. **Voice/image evaluation** — real evaluation datasets require consented
+   field recordings and agronomist review; no accuracy numbers are claimed.
 
 ## License
 

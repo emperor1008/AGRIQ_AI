@@ -161,12 +161,95 @@
     return response.ok;
   }
 
+  // --- Phase 4: crop-image endpoints ---------------------------------------
+
+  async function imageCapabilities() {
+    var response = await fetch("/api/v1/crop-images/capabilities");
+    if (!response.ok) throw new Error("Image capabilities unavailable");
+    return response.json();
+  }
+
+  async function analyseCropImage(file, crop) {
+    var form = new FormData();
+    form.append("image", file, file.name || "leaf.jpg");
+    form.append("crop", crop || "rice");
+    form.append("csrf_token", csrfToken());
+    var response = await fetch("/api/v1/crop-images/analyse", {
+      method: "POST",
+      body: form,
+    });
+    var data = await response.json();
+    if (!response.ok) {
+      // Keep the canonical farmer-facing message; never raw provider errors.
+      return { ok: false, error: data.error || "AGRIQ could not analyse this photo." };
+    }
+    return data;
+  }
+
+  async function sendImageFeedback(analysisId, farmerFeedback) {
+    var response = await fetch("/api/v1/crop-images/analyses/" + analysisId + "/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
+      body: JSON.stringify({ farmer_feedback: farmerFeedback }),
+    });
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Feedback failed");
+    return data;
+  }
+
+  async function requestImageExpertReview(analysisId) {
+    var response = await fetch("/api/v1/crop-images/analyses/" + analysisId + "/request-expert-review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
+      body: JSON.stringify({}),
+    });
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Request failed");
+    return data;
+  }
+
+  /** Phase 5: run the risk engine for one field (idempotent server-side). */
+  async function analyzeFieldRisk(fieldId, options) {
+    var response = await fetch("/api/v1/risk/fields/" + fieldId + "/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
+      body: JSON.stringify(options || {}),
+    });
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Risk analysis failed");
+    return data;
+  }
+
+  /** Phase 5: latest persisted run for a field. */
+  async function currentFieldRisk(fieldId) {
+    var response = await fetch("/api/v1/risk/fields/" + fieldId + "/current");
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.error || "No stored analysis");
+    return data;
+  }
+
+  /** Phase 5: record the farmer's action on a risk assessment. */
+  async function riskAction(riskId, payload) {
+    var response = await fetch("/api/v1/risk/assessments/" + riskId + "/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
+      body: JSON.stringify(payload),
+    });
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Could not save action");
+    return data;
+  }
+
   global.AgriqAPI = {
     askAI: askAI,
     fetchLiveWeather: fetchLiveWeather,
     copilotMessage: copilotMessage,
     recommendationFeedback: recommendationFeedback,
     farmerContext: farmerContext,
+    imageCapabilities: imageCapabilities,
+    analyseCropImage: analyseCropImage,
+    sendImageFeedback: sendImageFeedback,
+    requestImageExpertReview: requestImageExpertReview,
     voiceCapabilities: voiceCapabilities,
     voiceConsentStatus: voiceConsentStatus,
     voiceGiveConsent: voiceGiveConsent,
@@ -176,6 +259,9 @@
     voiceAskCopilot: voiceAskCopilot,
     voiceSynthesise: voiceSynthesise,
     voiceDeleteRecording: voiceDeleteRecording,
+    analyzeFieldRisk: analyzeFieldRisk,
+    currentFieldRisk: currentFieldRisk,
+    riskAction: riskAction,
     csrfToken: csrfToken,
   };
 })(window);

@@ -26,7 +26,7 @@ jobs:
           pip install -r apps/api/requirements.txt
 
       - name: Python syntax check
-        run: python -m compileall -q apps/api/agriq apps/api/tests
+        run: python -m compileall -q apps/api/agriq apps/api/tests ml
 
       - name: Lint (import hygiene via compile + basic flake rules)
         run: |
@@ -40,7 +40,7 @@ jobs:
           from pathlib import Path
           pattern = re.compile(r"(AIza[0-9A-Za-z_\-]{20,}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{20,})")
           hits = []
-          for base in ("apps/api/agriq", "apps/web/static", "scripts"):
+          for base in ("apps/api/agriq", "apps/web/static", "scripts", "ml"):
               for path in Path(base).rglob("*"):
                   if path.is_file() and path.suffix in {".py", ".js", ".json", ".html", ".css"}:
                       if pattern.search(path.read_text(encoding="utf-8", errors="ignore")):
@@ -93,3 +93,18 @@ jobs:
         run: python scripts/run_tests.py
         env:
           AGRIQ_SECRET_KEY: ci-test-secret-not-for-production
+
+      - name: Bandit security scan (SAST)
+        run: |
+          pip install bandit
+          python -m bandit -r apps/api/agriq ml -q -f json -o bandit.json || true
+          python - <<'EOF'
+          import json
+          data = json.load(open("bandit.json"))
+          blocking = [r for r in data.get("results", []) if r["issue_severity"] in ("HIGH", "MEDIUM")]
+          if blocking:
+              for r in blocking:
+                  print(f"{r['issue_severity']}: {r['filename']}:{r['line_number']} [{r['test_id']}] {r['issue_text']}")
+              raise SystemExit(1)
+          print("Bandit: no HIGH/MEDIUM findings.")
+          EOF

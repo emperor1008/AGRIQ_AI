@@ -31,7 +31,7 @@ Thumbs.db
 # Logs
 *.log
 
-# Freebuff workspace runtime state
+# Freebuff workspace / preview files
 .freebuff/
 
 # ML artefacts: datasets, model weights, reports (large binaries never in Git)
@@ -42,10 +42,16 @@ ml/data/splits/*.npz
 ml/data/splits/*.npy
 ml/data/manifests/*.npz
 ml/models/weights/
+ml/models/artifacts/
 ml/evaluation/reports/artifacts/
 ml/training/runs/
 
-# Local runtime and test-generated files
+# Private runtime storage (never public, never in Git)
 apps/api/image_store/
-apps/api/tests/_test_uploads/
 apps/api/voice_audio/
+apps/api/uploads/
+
+# Test throwaway storage
+apps/api/tests/_test_uploads/
+apps/api/tests/_test_voice_audio/
+apps/api/tests/_test_image_store/

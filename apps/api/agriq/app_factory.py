@@ -48,7 +48,7 @@ def create_app(config_object=None) -> Flask:
     db.init_app(app)
 
     # Blueprints -----------------------------------------------------------
-    from .api import assistant, auth, copilot, dashboard, errors, farmer_data, health, voice, weather
+    from .api import assistant, auth, copilot, dashboard, errors, farmer_data, health, images, risk, voice, weather
 
     app.register_blueprint(health.health_bp)
     app.register_blueprint(auth.auth_bp)
@@ -58,6 +58,8 @@ def create_app(config_object=None) -> Flask:
     app.register_blueprint(farmer_data.farmer_data_bp)
     app.register_blueprint(copilot.copilot_bp)
     app.register_blueprint(voice.voice_bp)
+    app.register_blueprint(images.image_bp)
+    app.register_blueprint(risk.risk_bp)
     app.register_blueprint(errors.errors_bp)
 
     _apply_rate_limits(app)
@@ -81,6 +83,9 @@ def create_app(config_object=None) -> Flask:
         limiter.limit(app.config.get("AGRIQ_RATE_VOICE_TRANSCRIBE", "10 per minute"))(get_transcription)
         limiter.limit(app.config.get("AGRIQ_RATE_VOICE_TTS", "10 per minute"))(synthesise)
         limiter.limit(app.config.get("AGRIQ_RATE_ASSISTANT", "12 per minute"))(voice_ask)
+        from .api.risk import analyze as risk_analyze
+
+        limiter.limit(app.config.get("AGRIQ_RATE_ANALYSIS", "20 per minute"))(risk_analyze)
 
     return app
 

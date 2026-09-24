@@ -1,0 +1,20 @@
+# AGRIQ AI model registry (Phase 4).
+#
+# Single source of truth for production image models. The web application
+# may load ONLY entries with approved_for_production: true AND a passing
+# checksum. Until a real, fully-evaluated model is registered here, every
+# image-analysis request returns the honest unavailable state:
+#   "Image analysis is not currently available."
+#
+# Required fields per entry (validated by ml/inference/registry.py):
+#   model_id, model_name, version, supported_crop, supported_classes,
+#   model_checksum, framework, input_size, preprocessing_version,
+#   dataset_manifest_versions, split_manifest, calibration_version,
+#   abstention_thresholds, evaluation_report,
+#   external_field_validation_status, licence,
+#   approved_for_production, approved_at, approver, weights_path
+#
+# Do NOT register a model without: real dataset provenance, leakage-checked
+# splits, completed calibration, an evaluation report, a named approver and
+# a recorded checksum. There are no entries yet — no fabricated models.
+models: []

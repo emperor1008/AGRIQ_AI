@@ -1,0 +1,129 @@
+# AGRIQ AI dataset registry (Phase 4).
+#
+# Real-data policy: every entry must record a verifiable original source,
+# licence and checksum. A dataset may be used for training ONLY with
+# status: approved (licence verified + quality reviewed by a named reviewer).
+#
+# Allowed status values:
+#   discovered | licence_review_required | quality_review_required
+#   | approved | rejected | archived
+#
+# NOTE: entries below are *discovery records* with real, cited public sources.
+# No images have been downloaded, no checksums computed and no licence review
+# completed in this build — so every entry stays at `discovered` /
+# `licence_review_required` and checksum/downloaded fields remain null.
+# Fabricating checksums or counts is forbidden.
+
+datasets:
+
+  - dataset_id: plantvillage
+    dataset_name: PlantVillage (subset relevant to rice & tomato)
+    original_source_url: "https://github.com/spMohanty/PlantVillage-Dataset"
+    original_authors: "Sharada P. Mohanty, David Hughes, Marcel Salathé"
+    associated_paper: "Using Deep Learning for Image-Based Plant Disease Detection (Frontiers in Plant Science, 2016)"
+    licence: "Open research dataset; attribution required — verification of current hosting terms pending"
+    licence_verified: false
+    permitted_use: "Research; commercial-use terms to be confirmed before approval"
+    crop: ["rice", "tomato"]
+    original_classes: ["rice_blast", "rice_brown_spot", "rice_bacterial_leaf_blight", "rice_tungro", "tomato_early_blight", "tomato_late_blight", "tomato_leaf_mould", "tomato_healthy", "rice_healthy"]
+    selected_classes: []          # filled only after label mapping review
+    original_image_count: null    # computed at download, never estimated
+    accepted_image_count: null
+    rejected_image_count: null
+    checksum: null                # sha256 of the downloaded archive, recorded by ml.data.download
+    downloaded_at: null
+    reviewed_at: null
+    reviewer: null
+    geographic_origin: "Controlled-background laboratory photographs (multi-country)"
+    capture_conditions: "Controlled single-leaf scans/photos, plain background; NOT representative of field photographs alone"
+    known_limitations:
+      - "Controlled images cannot alone prove field performance"
+      - "Class balance skewed; some classes very large"
+      - "Known label-noise reports for a minority of images"
+    split_strategy: "pending — will use grouped split by original image family"
+    status: discovered
+
+  - dataset_id: plantdoc
+    dataset_name: PlantDoc
+    original_source_url: "https://github.com/spMohanty/PlantVillage-Dataset"  # placeholder overridden at ingestion
+    original_authors: "David Hughes (see associated paper)"
+    associated_paper: "PlantDoc: A Dataset for Visual Plant Disease Detection (CoDS-COMAD 2020 — actual URL to be confirmed at licence review)"
+    licence: "To be verified (paper states open release); NOT yet verified"
+    licence_verified: false
+    permitted_use: "Research; to be confirmed"
+    crop: ["tomato", "rice"]
+    original_classes: ["tomato_early_blight", "tomato_late_blight", "tomato_leaf_mould", "tomato_healthy"]
+    selected_classes: []
+    original_image_count: null
+    accepted_image_count: null
+    rejected_image_count: null
+    checksum: null
+    downloaded_at: null
+    reviewed_at: null
+    reviewer: null
+    geographic_origin: "Field photographs, web-sourced (global)"
+    capture_conditions: "Real-world field-style images, varied backgrounds/lighting"
+    known_limitations:
+      - "Web-sourced provenance per-image not always traceable"
+      - "Rice coverage limited"
+      - "Label granularity differs from PlantVillage"
+    split_strategy: "pending — split by capture session/source"
+    status: licence_review_required
+
+  - dataset_id: paddy_doctor
+    dataset_name: Paddy Doctor
+    original_source_url: "https://www.kaggle.com/datasets/viditupreti/paddy-disease-classification"  # mirror; original competition page to be recorded
+    original_authors: "Paddy Doctor competition organisers (see associated page)"
+    associated_paper: "Paddy Doctor dataset/competition page (to be cited at licence review)"
+    licence: "To be verified against original organisers; NOT yet verified"
+    licence_verified: false
+    permitted_use: "Research; to be confirmed"
+    crop: ["rice"]
+    original_classes: ["rice_blast", "rice_brown_spot", "rice_bacterial_leaf_blight", "rice_tungro", "rice_healthy", "rice_hispa", "rice_downy_mildew", "rice_tungro", "others"]
+    selected_classes: []
+    original_image_count: null
+    accepted_image_count: null
+    rejected_image_count: null
+    checksum: null
+    downloaded_at: null
+    reviewed_at: null
+    reviewer: null
+    geographic_origin: "India (paddy field photographs)"
+    capture_conditions: "Field photographs with natural backgrounds"
+    known_limitations:
+      - "Kaggle mirror — must verify files match original source before use"
+      - "Contains classes outside AGRIQ Phase 4 scope (hispa, downy mildew) — will remain unsupported"
+    split_strategy: "pending — split by source/plant grouping"
+    status: licence_review_required
+
+  - dataset_id: rice_leaf_disease_sambalpur
+    dataset_name: Rice Leaf Disease Image Samples (Sambalpur University-associated research set)
+    original_source_url: "https://data.mendeley.com/datasets/fwcjvst95k/1"  # commonly cited Mendeley host — VERIFY at licence review
+    original_authors: "To be recorded from the dataset landing page"
+    associated_paper: "Associated Sambalpur University research publication (to be cited at licence review)"
+    licence: "To be verified (Mendeley CC terms expected); NOT yet verified"
+    licence_verified: false
+    permitted_use: "Research; to be confirmed"
+    crop: ["rice"]
+    original_classes: ["rice_blast", "rice_brown_spot", "rice_bacterial_leaf_blight", "rice_healthy"]
+    selected_classes: []
+    original_image_count: null
+    accepted_image_count: null
+    rejected_image_count: null
+    checksum: null
+    downloaded_at: null
+    reviewed_at: null
+    reviewer: null
+    geographic_origin: "India (Odisha-region relevance claimed by source; to be confirmed)"
+    capture_conditions: "To be recorded during validate step"
+    known_limitations:
+      - "Small sample size expected"
+      - "Regional relevance promising for Odisha; provenance must be verified"
+    split_strategy: "pending — grouped by capture session"
+    status: licence_review_required
+
+# Approved datasets: none. Training is impossible until at least one dataset
+# reaches status: approved through the documented review workflow.
+approved_dataset_ids: []
+registry_version: 1
+last_updated: "2026-09-23"
