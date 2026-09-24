@@ -55,3 +55,6 @@ apps/api/uploads/
 apps/api/tests/_test_uploads/
 apps/api/tests/_test_voice_audio/
 apps/api/tests/_test_image_store/
+
+# Freebuff preview/project files
+.freebuff/

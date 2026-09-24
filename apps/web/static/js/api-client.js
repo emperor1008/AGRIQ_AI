@@ -208,6 +208,38 @@
     return data;
   }
 
+  /** Phase 5: run the risk engine for one field (idempotent server-side). */
+  async function analyzeFieldRisk(fieldId, options) {
+    var response = await fetch("/api/v1/risk/fields/" + fieldId + "/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
+      body: JSON.stringify(options || {}),
+    });
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Risk analysis failed");
+    return data;
+  }
+
+  /** Phase 5: latest persisted run for a field. */
+  async function currentFieldRisk(fieldId) {
+    var response = await fetch("/api/v1/risk/fields/" + fieldId + "/current");
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.error || "No stored analysis");
+    return data;
+  }
+
+  /** Phase 5: record the farmer's action on a risk assessment. */
+  async function riskAction(riskId, payload) {
+    var response = await fetch("/api/v1/risk/assessments/" + riskId + "/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
+      body: JSON.stringify(payload),
+    });
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Could not save action");
+    return data;
+  }
+
   global.AgriqAPI = {
     askAI: askAI,
     fetchLiveWeather: fetchLiveWeather,
@@ -227,6 +259,9 @@
     voiceAskCopilot: voiceAskCopilot,
     voiceSynthesise: voiceSynthesise,
     voiceDeleteRecording: voiceDeleteRecording,
+    analyzeFieldRisk: analyzeFieldRisk,
+    currentFieldRisk: currentFieldRisk,
+    riskAction: riskAction,
     csrfToken: csrfToken,
   };
 })(window);

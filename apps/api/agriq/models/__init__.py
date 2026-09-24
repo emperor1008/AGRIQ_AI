@@ -16,6 +16,7 @@ from .image_analysis import (  # noqa: F401
     ImageAnalysis,
     ImageAnalysisFeedback,
 )
+from .risk import RiskAssessment  # noqa: F401
 from .farmer import (  # noqa: F401
     Conversation,
     CropCycle,
@@ -55,4 +56,5 @@ __all__ = [
     "SynthesisedAudio",
     "ImageAnalysis",
     "ImageAnalysisFeedback",
+    "RiskAssessment",
 ]

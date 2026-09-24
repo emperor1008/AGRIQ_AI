@@ -1,0 +1,20 @@
+{# Phase 5: Crop Risk Intelligence panel — existing AGRIQ design tokens.
+   All values render from the persisted backend run; states are never
+   colour-only and unavailable data is shown honestly. #}
+<section class="report-area crop-risk-area" id="cropRisk" aria-labelledby="riskHeading">
+    <div class="section-heading">
+        <span class="section-kicker">Crop Risk</span>
+        <h2 id="riskHeading">Field risk conditions</h2>
+        <p>Screening from verified weather, your crop cycle and field records — not a diagnosis.</p>
+    </div>
+
+    <div class="crop-risk-panel" data-crop-risk-panel>
+        <div class="crop-risk-panel__toolbar">
+            <span id="cropRiskPanelField" class="crop-risk-panel__field"></span>
+            <button type="button" id="cropRiskRefresh" class="crop-risk-refresh-btn">Refresh analysis</button>
+        </div>
+        <div id="cropRiskPanelBody" class="crop-risk-panel__body" aria-live="polite" aria-busy="false">
+            <p class="crop-risk-empty">Run an analysis to see current risk conditions for this field.</p>
+        </div>
+    </div>
+</section>

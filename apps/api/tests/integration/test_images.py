@@ -260,11 +260,12 @@ class TestMigrationChain:
         cfg.set_main_option("script_location", str(API_DIR / "migrations"))
         return cfg
 
-    def test_head_is_0004_phase4_image(self):
+    def test_head_is_0005_phase5_risk(self):
+        """Phase 5 adds 0005_phase5_risk on top of the Phase 4 head."""
         from alembic.script import ScriptDirectory
 
         script = ScriptDirectory.from_config(self._alembic_cfg())
-        assert script.get_heads() == ["0004_phase4_image"]
+        assert script.get_heads() == ["0005_phase5_risk"]
 
     def test_upgrade_downgrade_cycle_on_clean_db(self, tmp_path):
         """Full upgrade → downgrade → upgrade against an isolated SQLite file."""
