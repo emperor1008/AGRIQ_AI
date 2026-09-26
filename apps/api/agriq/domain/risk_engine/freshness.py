@@ -10,7 +10,7 @@ confidence and the staleness is surfaced to the farmer (§16, §50).
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Any, Mapping, Optional
+from typing import Any, Optional
 
 from ...core.time import as_utc, utc_now
 

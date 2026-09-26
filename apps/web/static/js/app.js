@@ -14,7 +14,8 @@
     global.AgriqAssistant.bindKeyboard();
 
     // Expose handlers used by inline onclick attributes in templates.
-    global.runDemoCase = function () { global.AgriqLeafScan.runDemoCase(); };
+    // Phase 7 (§2/§52): the demo-case handler was removed — it submitted
+    // fabricated crop/district/stage/field-condition values into the real form.
     global.refreshLiveWeather = function () { global.AgriqWeather.refresh(); };
     global.quickAskAI = function (t) { global.AgriqAssistant.quickAskAI(t); };
     global.askAGRIQAI = function () { global.AgriqAssistant.ask(); };

@@ -28,6 +28,14 @@
     market_volatility: "Market price movement",
   };
 
+  // Assessment method, stated plainly so a rule screening is never mistaken
+  // for a validated model output (Phase 5 §7, §22).
+  var METHOD_LABELS = {
+    rule_based: "Rule-based screening",
+    ml: "Model-based assessment",
+    hybrid: "Rule + model assessment",
+  };
+
   function el(tag, className, text) {
     var node = document.createElement(tag);
     if (className) node.className = className;
@@ -45,6 +53,10 @@
     if (value >= 0.5) return "Moderate confidence";
     if (value > 0) return "Low confidence";
     return "Confidence not available";
+  }
+
+  function methodLabel(method) {
+    return METHOD_LABELS[method] || null;
   }
 
   function formatTime(iso) {
@@ -79,6 +91,10 @@
           ? "There is not enough verified data available to assess this risk right now."
           : "There is not enough verified data to assess this risk.");
       card.appendChild(note);
+      var unavailableMethod = methodLabel(assessment.assessment_method);
+      if (unavailableMethod) {
+        card.appendChild(el("p", "crop-risk-card__method", unavailableMethod));
+      }
       return card;
     }
 
@@ -88,6 +104,14 @@
       // One decimal at most — never excessive precision.
       prob.appendChild(document.createTextNode(Math.round(assessment.probability * 100) + "%"));
       card.appendChild(prob);
+      // The backend states what the number is. Render it verbatim so the screen
+      // can never imply a calibrated probability the backend did not claim.
+      if (assessment.probability_interpretation) {
+        var interpretation = el("p", "crop-risk-card__note",
+          assessment.probability_interpretation.charAt(0).toUpperCase() +
+          assessment.probability_interpretation.slice(1) + ".");
+        card.appendChild(interpretation);
+      }
     }
 
     if (assessment.reasons && assessment.reasons.length) {
@@ -146,6 +170,14 @@
     foot.appendChild(el("span", "crop-risk-card__confidence",
       confidenceWord(assessment.confidence) +
       (assessment.confidence ? " (" + Math.round(assessment.confidence * 100) + "%)" : "")));
+    var method = methodLabel(assessment.assessment_method);
+    if (method) {
+      var methodNote = el("span", "crop-risk-card__method", method);
+      if (assessment.calibration_status && assessment.calibration_status !== "validated") {
+        methodNote.setAttribute("title", "Calibration not validated for this assessment.");
+      }
+      foot.appendChild(methodNote);
+    }
     if (assessment.requires_expert_confirmation) {
       foot.appendChild(el("span", "crop-risk-card__expert",
         "Expert confirmation recommended — contact your KVK or agriculture officer."));
@@ -261,8 +293,9 @@
     // Discover the active field from the shared farmer context, then load
     // the stored run (first visit shows the quiet empty state on failure).
     if (!global.AgriqAPI || !global.AgriqAPI.farmerContext) return;
-    global.AgriqAPI.farmerContext().then(function (ctx) {
-      var field = ctx && ctx.field;
+    global.AgriqAPI.farmerContext().then(function (payload) {
+      // The endpoint answers {ok, context} — read the nested context.
+      var field = payload && payload.context && payload.context.field;
       if (!field || !field.id) return;
       global.AgriqPanelState = global.AgriqPanelState || {};
       global.AgriqPanelState.activeFieldId = field.id;

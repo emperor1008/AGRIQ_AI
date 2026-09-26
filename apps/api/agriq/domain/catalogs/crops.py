@@ -1,21 +1,18 @@
 """Crop knowledge base: crop profiles, aliases and market baseline bands."""
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Any
 
-#: Historical, hand-curated price bands (₹/quintal) used only for advisory
-#: context ranges. This is NOT live market data; live mandi prices come from
-#: the AGMARKNET integration and, when unavailable, the UI shows an
-#: unavailable state instead of these bands.
-MARKET_BASELINE: dict[str, tuple[int, int]] = {
-    "rice": (2100, 2600), "paddy": (2100, 2600), "wheat": (2300, 2800), "maize": (1900, 2500),
-    "ragi": (3200, 4200), "groundnut": (5600, 7200), "mustard": (5200, 6800), "cotton": (6500, 8200),
-    "sugarcane": (300, 450), "tomato": (1200, 3600), "potato": (900, 2400), "brinjal": (1200, 3200),
-    "okra": (1800, 4200), "chilli": (5000, 12000), "cabbage": (800, 2200), "cauliflower": (1000, 2800),
-    "onion": (1200, 3600), "pumpkin": (800, 2000), "cucumber": (1000, 2400), "bitter gourd": (1800, 4500),
-    "bottle gourd": (900, 2200), "mango": (3500, 9000), "banana": (1000, 2500), "papaya": (1000, 2800),
-    "coconut": (1800, 4500), "watermelon": (900, 2200),
-}
+# REMOVED in Phase 7 (§53 hardcoded-value audit): a hand-curated
+# ``MARKET_BASELINE`` table of ₹/quintal bands for 26 crops used to live here.
+# It recorded no source, citation, retrieval date, licence or update
+# frequency, it was rendered to farmers as a rupee price range, and it applied
+# an invented fallback band to any crop missing from the table. Under the
+# real-data policy ("every production numerical value must have a legitimate
+# source") it could not be labelled honestly, so it was deleted rather than
+# relabelled. Rupee values now come ONLY from the AGMARKNET provider through
+# ``services/market_service`` / ``services/market_intelligence``, and are
+# reported unavailable when that provider cannot be reached.
 
 GROWTH_STAGES: list[str] = [
     "Seedling",
@@ -143,7 +140,6 @@ def crop_display_names() -> list[str]:
 
 __all__ = [
     "CROPS",
-    "MARKET_BASELINE",
     "GROWTH_STAGES",
     "FIELD_CONDITIONS",
     "crop_item",

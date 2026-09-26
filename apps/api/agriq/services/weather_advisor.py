@@ -69,7 +69,6 @@ def build_weather_recommendation(
         )
 
     temp = weather.get("temp")
-    humidity = weather.get("humidity")
     precipitation = weather.get("precipitation") or 0
     wind = weather.get("wind")
     reasons: list[str] = []

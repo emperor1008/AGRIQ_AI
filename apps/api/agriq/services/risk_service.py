@@ -18,12 +18,12 @@ from typing import Any, Mapping, Optional
 
 from ..core.time import utc_now
 from ..domain.risk_engine import analyzers, weather_input
-from ..domain.risk_engine.base import Assessment, RISK_TYPES
+from ..domain.risk_engine.base import PROBABILITY_INTERPRETATION, Assessment
 from ..domain.risk_engine import thresholds
 from ..domain.risk_engine.freshness import classify
 from ..repositories.copilot_repository import RecommendationRepository
 from ..repositories.risk_repository import RiskAssessmentRepository
-from . import farmer_context, market_service, weather_service
+from . import farmer_context, market_service
 
 RISK_ASSESSMENT_TTL_MINUTES = 30  # §36: avoid recomputing needlessly
 
@@ -91,7 +91,7 @@ def analyze_context(
     """
     import time as _time
 
-    started = perf = _time.perf_counter()
+    started = _time.perf_counter()
 
     field = context.get("field") or {}
     cycle = context.get("crop_cycle") or {}
@@ -166,6 +166,10 @@ def analyze_context(
         assessments=[a.to_dict() for a in assessments],
         rule_version=thresholds.RULES_VERSION,
         valid_until=valid_until,
+        # Evaluation dimensions snapshotted at assessment time (§13).
+        crop_name=str(crop) if crop else None,
+        growth_stage=str(stage) if stage else None,
+        district=(context.get("farmer") or {}).get("district"),
     )
     duration_ms = int((_time.perf_counter() - started) * 1000)
     return _run_payload(
@@ -296,6 +300,13 @@ def _run_payload(
                 "requires_expert_confirmation": bool(row.requires_expert_confirmation),
                 "unavailable_reason": row.unavailable_reason,
                 "rule_version": row.rule_version,
+                "assessment_method": row.assessment_method,
+                "probability_kind": row.probability_kind,
+                "calibration_status": row.calibration_status,
+                "probability_interpretation": PROBABILITY_INTERPRETATION.get(row.probability_kind),
+                "crop": row.crop_name,
+                "growth_stage": row.growth_stage,
+                "district": row.district,
                 "generated_at": row.generated_at.isoformat() if row.generated_at else None,
                 "valid_until": row.valid_until.isoformat() if row.valid_until else None,
             }

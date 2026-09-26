@@ -1,30 +1,20 @@
 /**
- * AGRIQ AI — LeafScan upload helper + demo case.
- * runDemoCase ported verbatim; adds a client-side pre-check mirroring the
- * server rule (JPG/PNG/WebP, <= 5 MiB) so users get early feedback.
+ * AGRIQ AI — LeafScan upload helper.
+ * Client-side pre-check mirroring the server rule (JPG/PNG/WebP, <= 5 MiB)
+ * so users get early feedback before the upload round-trip.
+ *
+ * Phase 7 (§2/§4/§52): the former demo-case helper was REMOVED. It filled the
+ * form with context the farmer never entered (a fixed crop, district, growth
+ * stage and field condition) and auto-submitted it to the real analysis form,
+ * so fabricated observations were processed and persisted as farmer-reported
+ * data. Production code must never fabricate farmer context; a labelled test
+ * fixture can only live inside the automated test suite.
  */
 (function (global) {
   "use strict";
 
   var MAX_BYTES = 5 * 1024 * 1024;
   var ALLOWED = ["jpg", "jpeg", "png", "webp"];
-
-  function runDemoCase() {
-    var crop = document.getElementById("cropInput");
-    var district = document.getElementById("districtSelect");
-    var stage = document.getElementById("growthStageSelect");
-    var condition = document.getElementById("fieldConditionSelect");
-    var form = document.getElementById("farmForm");
-
-    if (crop) crop.value = "Rice";
-    if (district) district.value = "Cuttack";
-    if (stage) stage.value = "Vegetative";
-    if (condition) condition.value = "Humid field";
-
-    setTimeout(function () {
-      form.submit();
-    }, 250);
-  }
 
   function bindUploadGuard() {
     var input = document.querySelector('.leaf-upload input[type="file"]');
@@ -40,5 +30,5 @@
     });
   }
 
-  global.AgriqLeafScan = { runDemoCase: runDemoCase, bindUploadGuard: bindUploadGuard };
+  global.AgriqLeafScan = { bindUploadGuard: bindUploadGuard };
 })(window);

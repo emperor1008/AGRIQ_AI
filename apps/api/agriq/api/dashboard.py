@@ -9,6 +9,7 @@ from __future__ import annotations
 from flask import Blueprint, redirect, render_template, request, session, url_for
 
 from ..core.constants import MODE_FARMER, SESSION_USER_KEY
+from ..core.logging import get_logger
 from ..core.security import get_csrf_token, is_authenticated
 from ..core.time import now_ist
 from ..domain.catalogs.crops import (
@@ -36,6 +37,8 @@ from ..schemas.farmer import parse_farm_request
 from ..services import farm_intelligence, student_intelligence
 from ..services import farmer_context as farmer_context_service
 
+logger = get_logger("api.dashboard")
+
 dashboard_bp = Blueprint("dashboard", __name__)
 
 
@@ -52,7 +55,6 @@ def dashboard():
     selected_stage = "Vegetative"
     selected_condition = "Normal field"
     context = None
-    growth_stages_for_confirm = GROWTH_STAGES
 
     # Phase 1: shared farmer context for the My Farm Data section.
     if user_mode == MODE_FARMER:

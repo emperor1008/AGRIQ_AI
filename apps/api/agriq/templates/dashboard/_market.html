@@ -1,0 +1,72 @@
+{# Phase 6: Farm-to-Market Optimizer panel — existing AGRIQ design tokens.
+   Every figure renders from official AGMARKNET records or from a forecast the
+   backend actually produced; empty/unavailable states are first-class. #}
+<section class="report-area market-area" id="farmToMarket" aria-labelledby="marketHeading">
+    <div class="section-heading">
+        <span class="section-kicker">Farm to Market</span>
+        <h2 id="marketHeading">Market intelligence</h2>
+        <p>Official mandi records, price trend and market comparison — never estimated prices.</p>
+    </div>
+
+    <div class="market-panel" data-market-panel>
+        <div class="market-panel__toolbar">
+            <span id="marketPanelCrop" class="market-panel__crop"></span>
+            <div class="market-panel__actions">
+                <button type="button" id="marketRefresh" class="market-refresh-btn">Refresh prices</button>
+                <button type="button" id="marketSellHold" class="market-refresh-btn">Sell or wait?</button>
+                <button type="button" id="marketCropOptions" class="market-refresh-btn">Crop options</button>
+                <button type="button" id="marketLogistics" class="market-refresh-btn">Compare markets &amp; costs</button>
+            </div>
+        </div>
+
+        {# These are the farmer's own figures. AGRIQ has no verified freight,
+           input-cost or yield source, so a blank field stays unknown and keeps the
+           net value incomplete; 0 means the cost genuinely is zero. #}
+        <details class="market-details" id="marketSaleDetails">
+            <summary>Sale details for a cost check (optional)</summary>
+            <div class="market-details__grid">
+                <label class="market-field">
+                    <span>Quantity to sell (quintals)</span>
+                    <input type="number" id="marketQuantity" min="0.01" step="0.01"
+                           inputmode="decimal" autocomplete="off">
+                </label>
+                <label class="market-field">
+                    <span>Transport rate you pay (₹ per km per quintal)</span>
+                    <input type="number" id="marketTransportRate" min="0" step="0.01"
+                           inputmode="decimal" autocomplete="off">
+                </label>
+                <label class="market-field">
+                    <span>Total freight you pay (₹) — if you know it</span>
+                    <input type="number" id="marketFreight" min="0" step="1"
+                           inputmode="numeric" autocomplete="off">
+                </label>
+                <label class="market-field">
+                    <span>Input cost so far (₹ total)</span>
+                    <input type="number" id="marketInputCost" min="0" step="1"
+                           inputmode="numeric" autocomplete="off">
+                </label>
+                <label class="market-field">
+                    <span>Market fee or commission (₹ total)</span>
+                    <input type="number" id="marketMarketFee" min="0" step="1"
+                           inputmode="numeric" autocomplete="off">
+                </label>
+                <label class="market-field">
+                    <span>Can you store the harvest?</span>
+                    <select id="marketStorage">
+                        <option value="">Not stated</option>
+                        <option value="yes">Yes, I can store it</option>
+                        <option value="no">No, it has to move soon</option>
+                    </select>
+                </label>
+            </div>
+            <p class="market-card__note">Leave a field blank and it stays unknown: AGRIQ does not
+                estimate freight, input cost or yield, so the net value is withheld and marked
+                incomplete. Enter 0 only when that cost really is zero. Give either a per-km rate
+                or the total freight you pay — the total is used when both are filled in.</p>
+        </details>
+
+        <div id="marketPanelBody" class="market-panel__body" aria-live="polite" aria-busy="false">
+            <p class="market-empty">Load market intelligence to see official prices for your crop and district.</p>
+        </div>
+    </div>
+</section>

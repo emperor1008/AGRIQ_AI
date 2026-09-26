@@ -19,7 +19,7 @@ all pipeline logic lives in services, provider calls in integrations.
 """
 from __future__ import annotations
 
-from flask import Blueprint, Response, jsonify, request, send_file
+from flask import Blueprint, jsonify, request, send_file
 from pathlib import Path
 
 from ..core.audit import audit_event

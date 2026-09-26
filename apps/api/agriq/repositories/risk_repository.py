@@ -93,6 +93,9 @@ class RiskAssessmentRepository:
         assessments: list[dict[str, Any]],
         rule_version: str,
         valid_until: Any,
+        crop_name: Optional[str] = None,
+        growth_stage: Optional[str] = None,
+        district: Optional[str] = None,
     ) -> list[RiskAssessment]:
         """Persist a full run: mark the previous run superseded, insert new rows.
 
@@ -111,6 +114,7 @@ class RiskAssessmentRepository:
             and p.status == a["status"]
             and p.probability == a["probability"]
             and p.rule_version == rule_version
+            and (p.assessment_method or "rule_based") == a.get("assessment_method", "rule_based")
             for a in assessments
         )
         if unchanged:
@@ -127,6 +131,9 @@ class RiskAssessmentRepository:
             actions = data.pop("actions", None)
             data_quality = data.pop("data_quality", None)
             confidence_basis = data.pop("confidence_basis", None)
+            # Derived display text, not a stored field: the API rebuilds it from
+            # ``probability_kind`` so the wording can never drift from storage.
+            data.pop("probability_interpretation", None)
             row = RiskAssessment(
                 user_id=user_id,
                 field_id=field_id,
@@ -140,6 +147,9 @@ class RiskAssessmentRepository:
                 confidence_basis=confidence_basis,
                 rule_version=rule_version,
                 valid_until=valid_until,
+                crop_name=crop_name,
+                growth_stage=growth_stage,
+                district=district,
                 **data,
             )
             db.session.add(row)
@@ -158,6 +168,45 @@ class RiskAssessmentRepository:
                 .limit(limit)
             ).scalars()
         )
+
+    @staticmethod
+    def issued_for_evaluation(
+        since: Any = None, until: Any = None, limit: int = 50000
+    ) -> list[dict[str, Any]]:
+        """Every warning ever ISSUED in a window, for offline risk evaluation (§13–17).
+
+        Superseded rows are included on purpose: a warning that was issued stays
+        issued for evaluation purposes even after a later run supersedes it —
+        otherwise false alerts would silently disappear from the record. Read
+        only; never called from the farmer-facing request path.
+
+        Returns plain dictionaries (no ORM objects) so the evaluation module has
+        no database dependency and can be unit-tested in isolation.
+        """
+        query = select(RiskAssessment).order_by(RiskAssessment.generated_at.asc(), RiskAssessment.id.asc())
+        if since is not None:
+            query = query.where(RiskAssessment.generated_at >= since)
+        if until is not None:
+            query = query.where(RiskAssessment.generated_at <= until)
+        query = query.limit(limit)
+        return [
+            {
+                "id": row.id,
+                "field_id": row.field_id,
+                "risk_type": row.risk_type,
+                "status": row.status,
+                "probability": row.probability,
+                "generated_at": row.generated_at.isoformat() if row.generated_at else None,
+                "crop_name": row.crop_name,
+                "growth_stage": row.growth_stage,
+                "district": row.district,
+                "rule_version": row.rule_version,
+                "assessment_method": row.assessment_method,
+                "probability_kind": row.probability_kind,
+                "calibration_status": row.calibration_status,
+            }
+            for row in db.session.execute(query).scalars()
+        ]
 
 
 __all__ = ["RiskAssessmentRepository"]

@@ -5,10 +5,17 @@ Phase 1 real-data policy:
   unavailable the analysis is still produced from crop/stage/field/LeafScan
   evidence, with the weather-driven components honestly omitted and the
   console showing "Verified data is currently unavailable."
-- Market figures remain curated context bands, clearly labelled as bands —
-  never as live mandi data. Live mandi records come only from the
-  AGMARKNET integration via services/market_service and are reported as
-  unavailable when they cannot be fetched.
+- Market figures: Phase 7 removed the curated price bands entirely (they
+  recorded no source, and an invented fallback band was applied to unlisted
+  crops). Live mandi records come only from the AGMARKNET integration via
+  services/market_service and are reported as unavailable when they cannot be
+  fetched — this module now emits an explicit unavailable state instead of a
+  rupee range.
+- Rule-based indicators (risk score, crop health, yield protection, indicative
+  loss band, screening confidence) are heuristics, not measurements. They ship
+  with ``heuristic_status`` / ``confidence_status`` / ``yield_loss_status`` and
+  a documented basis string; the formulas are reproduced verbatim in
+  ``docs/dashboard-heuristics.md``.
 - District map markers: the selected analysis district carries the actual
   score; every other district shows "Awaiting verified analysis." — no
   offline-model risk values are generated for unanalysed districts.
@@ -18,8 +25,16 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from ..core.config import BaseConfig
-from ..core.constants import AWAITING_ANALYSIS_MESSAGE
-from ..domain.catalogs.crops import MARKET_BASELINE, resolve_crop
+from ..core.constants import (
+    AWAITING_ANALYSIS_MESSAGE,
+    BASIS_RULE_HEURISTIC,
+    BASIS_UNCALIBRATED_SCREENING,
+    NO_VERIFIED_IMPACT_MESSAGE,
+    NO_VERIFIED_MARKET_MESSAGE,
+    TOKEN_DATA_UNAVAILABLE,
+    TOKEN_YIELD_IMPACT_NOT_MEASURED,
+)
+from ..domain.catalogs.crops import resolve_crop
 from ..domain.catalogs.districts import DISTRICTS
 from ..domain.risk.explanations import english_advisory, explain_reasons, odia_advisory
 from ..domain.risk.recommendations import (
@@ -32,42 +47,57 @@ from ..domain.risk.scoring import (
     clamp,
     component_scores,
     confidence_score,
+    confidence_status,
     crop_health,
+    heuristic_status,
     productivity_score,
     risk_color,
     risk_status,
     urgency,
     yield_loss_band,
+    yield_loss_status,
 )
 from . import leaf_analysis
 from .weather_advisory import build_weather_console, forecast_for
 
 
 def market_advisory(crop_key: str, district: str, score: float, productivity: int) -> dict[str, Any]:
-    """Curated price-band context (NOT live market data)."""
-    low, high = MARKET_BASELINE.get(crop_key, (1200, 3200))
-    pressure = "Stable"
-    if score >= 70:
-        pressure = "Quality-risk pressure"
-    elif productivity >= 75:
-        pressure = "Healthy production outlook"
-    elif district in {"Puri", "Kendrapara", "Jagatsinghpur", "Cuttack", "Balasore",
-                      "Bhadrak", "Ganjam", "Khordha", "Jajpur"} and score >= 55:
-        pressure = "Weather-sensitive market risk"
+    """Market context block — honest unavailable state (Phase 7 §2/§53).
+
+    This block used to render a hand-curated ₹/quintal band, including an
+    invented fallback band for crops missing from that table. No sourced price
+    series exists for advisory context, and a plausible-looking number is not a
+    source, so AGRIQ now states the limitation instead of showing one. Live
+    mandi prices come only from the AGMARKNET provider through
+    ``services.market_service``; the market panel and the Copilot are the real
+    market surfaces.
+
+    The behavioural advice is retained: it is generic selling guidance, not a
+    data claim, and it makes no numerical assertion.
+    """
     return {
-        "range": f"₹{low:,} - ₹{high:,} / quintal",
-        "pressure": pressure,
-        "advice": "Do not rush selling only due to crop risk. Compare local mandi rate, crop quality, storage condition and urgent cash need before decision.",
+        "available": False,
+        "status": TOKEN_DATA_UNAVAILABLE,
+        "range": None,
+        "pressure": None,
+        "message": NO_VERIFIED_MARKET_MESSAGE,
+        "advice": (
+            "Do not rush selling only due to crop risk. Compare local mandi rate, crop "
+            "quality, storage condition and urgent cash need before decision."
+        ),
     }
 
 
 def profit_impact(score: float, crop_key: str) -> str:
-    """Transparent indicative profit-risk range derived from the curated band."""
-    base_low, base_high = MARKET_BASELINE.get(crop_key, (1200, 3200))
-    acre_factor = max(900, int(((base_low + base_high) / 2) * 0.65))
-    low = int((score / 100) * acre_factor * 0.9)
-    high = int(low + (score * 72) + 850)
-    return f"₹{low:,} - ₹{high:,} / acre if untreated"
+    """Rupee impact is NOT estimated (Phase 7 §2/§53).
+
+    The previous implementation multiplied a curated price band by the risk
+    score to print "₹X - ₹Y / acre if untreated". Three unsourced inputs were
+    chained into a currency figure, so it was removed rather than labelled: a
+    rupee amount a farmer might act on cannot be produced from data AGRIQ does
+    not have.
+    """
+    return NO_VERIFIED_IMPACT_MESSAGE
 
 
 def make_map_data(
@@ -146,6 +176,16 @@ def analyze_farm(
         "yield_loss": yield_loss_band(score),
         "profit_impact": profit_impact(score, crop_key),
         "confidence": confidence_score(score, weather, leafscan, components),
+        # Phase 7 §3: every rule-based number ships with its own honest status
+        # and basis, so no consumer can present a heuristic as a measurement or
+        # a screening band as calibrated confidence.
+        "heuristic_status": heuristic_status(),
+        "heuristic_basis": BASIS_RULE_HEURISTIC,
+        "confidence_status": confidence_status(),
+        "confidence_basis": BASIS_UNCALIBRATED_SCREENING,
+        "yield_loss_status": yield_loss_status(),
+        "yield_loss_basis": BASIS_RULE_HEURISTIC,
+        "impact_status": TOKEN_YIELD_IMPACT_NOT_MEASURED,
         "reasons": explain_reasons(crop, weather, components, leafscan, growth_stage, field_condition),
         "farm_twin": digital_farm_twin(crop, district, weather, score, growth_stage, field_condition),
         "before_after": before_after(score),
@@ -192,7 +232,7 @@ def build_farmer_dropdown_sections(analysis: Mapping[str, Any]) -> list[dict[str
         {
             "anchor": "riskBreakdown",
             "title": "📊 2. Risk Breakdown",
-            "badge": str(analysis["risk"]) + "% risk",
+            "badge": str(analysis["risk"]) + "% risk • rule estimate",
             "rows": [{"left": name, "right": str(value) + "%"} for name, value in analysis["components"].items()],
         },
         {
@@ -217,16 +257,29 @@ def build_farmer_dropdown_sections(analysis: Mapping[str, Any]) -> list[dict[str
         {
             "anchor": "yieldHub",
             "title": "💰 5. Yield, Profit & Before/After Impact",
-            "badge": analysis["yield_loss"],
-            "paragraphs": [analysis["before_after"].get("message", ""), analysis["market"].get("advice", "")],
+            # Phase 7 §2/§53: the badge used to print the yield-loss band as if
+            # it were measured. The band is still shown below, labelled.
+            "badge": "Indicative bands — not measured",
+            "paragraphs": [
+                analysis["before_after"].get("message", ""),
+                analysis["market"].get("advice", ""),
+                analysis["market"].get("message", ""),
+                "Basis: " + str(analysis.get("yield_loss_basis", BASIS_RULE_HEURISTIC)),
+            ],
             "rows": [
-                {"left": "Crop health", "right": str(analysis["health"]) + "%"},
-                {"left": "Yield protection", "right": str(analysis["productivity"]) + "%"},
-                {"left": "If untreated", "right": analysis["before_after"].get("untreated", "")},
-                {"left": "After early action", "right": analysis["before_after"].get("after_action_risk", "")},
-                {"left": "Protection potential", "right": analysis["before_after"].get("protection", "")},
-                {"left": "Profit risk", "right": analysis.get("profit_impact", "")},
-                {"left": "Mandi band (context, not live)", "right": analysis["market"].get("range", "")},
+                {"left": "Crop health (rule estimate, not measured)",
+                 "right": str(analysis["health"]) + "%"},
+                {"left": "Yield protection (rule estimate, not measured)",
+                 "right": str(analysis["productivity"]) + "%"},
+                {"left": "If untreated (indicative band, not a measurement)",
+                 "right": analysis["before_after"].get("untreated", "")},
+                {"left": "Early-action scenario (illustrative, not a forecast)",
+                 "right": analysis["before_after"].get("after_action_risk", "")},
+                {"left": "Protection potential (qualitative)",
+                 "right": analysis["before_after"].get("protection", "")},
+                {"left": "Profit impact", "right": analysis.get("profit_impact", "")},
+                {"left": "Mandi price",
+                 "right": "Not available — no verified source"},
             ],
         },
         {

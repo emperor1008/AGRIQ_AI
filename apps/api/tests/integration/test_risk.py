@@ -244,6 +244,85 @@ def test_foreign_assessment_read_is_404(onboarded_farmer, second_onboarded_farme
 # Regressions: existing routes untouched
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Assessment-method provenance + evaluation dimensions (§7, §13, §17)
+# ---------------------------------------------------------------------------
+
+def test_api_declares_assessment_method_and_probability_kind(onboarded_farmer):
+    client = onboarded_farmer["client"]
+    field_id = onboarded_farmer["field"]["id"]
+    run = client.post(f"/api/v1/risk/fields/{field_id}/analyze",
+                      json={}, headers=TEST_CONTEXT_HEADERS).get_json()
+    for assessment in run["assessments"]:
+        assert assessment["assessment_method"] == "rule_based"
+        assert assessment["calibration_status"] in ("not_validated", "not_applicable")
+        if assessment["probability"] is not None:
+            # The API must never present a rule score as a calibrated probability.
+            assert assessment["probability_kind"] == "rule_score"
+            assert "not a calibrated probability" in assessment["probability_interpretation"]
+        else:
+            assert assessment["probability_kind"] is None
+            assert assessment["probability_interpretation"] is None
+        # Evaluation dimensions are snapshotted at analysis time.
+        assert "growth_stage" in assessment and "district" in assessment
+
+
+def test_current_endpoint_also_carries_provenance(onboarded_farmer):
+    client = onboarded_farmer["client"]
+    field_id = onboarded_farmer["field"]["id"]
+    client.post(f"/api/v1/risk/fields/{field_id}/analyze", json={}, headers=TEST_CONTEXT_HEADERS)
+    stored = client.get(f"/api/v1/risk/fields/{field_id}/current").get_json()["assessments"][0]
+    assert stored["assessment_method"] == "rule_based"
+    assert stored["calibration_status"] in ("not_validated", "not_applicable")
+    assert stored["crop"] == "Rice"
+    assert stored["district"] == "Cuttack"
+    assert stored["growth_stage"]
+
+
+def test_evaluation_read_path_exposes_dimensions_and_never_mutates(onboarded_farmer, app):
+    """The offline evaluation reader returns plain dicts and issues no writes."""
+    from agriq.extensions import db
+    from agriq.repositories.risk_repository import RiskAssessmentRepository
+
+    client = onboarded_farmer["client"]
+    field_id = onboarded_farmer["field"]["id"]
+    client.post(f"/api/v1/risk/fields/{field_id}/analyze", json={}, headers=TEST_CONTEXT_HEADERS)
+
+    with app.app_context():
+        rows = RiskAssessmentRepository.issued_for_evaluation()
+        assert rows, "the run just stored must be readable for evaluation"
+        for row in rows:
+            assert set(row) >= {
+                "risk_type", "status", "probability", "generated_at",
+                "crop_name", "growth_stage", "district", "assessment_method",
+                "probability_kind", "calibration_status",
+            }
+        db.session.rollback()
+
+
+def test_evaluation_reports_insufficient_data_without_a_real_dataset(onboarded_farmer, app):
+    """End-to-end honesty check: no reference dataset → no fabricated metrics."""
+    from agriq.domain.risk_evaluation import evaluate as evaluate_module
+    from agriq.domain.risk_evaluation.dataset import unavailable
+    from agriq.repositories.risk_repository import RiskAssessmentRepository
+
+    client = onboarded_farmer["client"]
+    field_id = onboarded_farmer["field"]["id"]
+    client.post(
+        f"/api/v1/risk/fields/{field_id}/analyze", json={}, headers=TEST_CONTEXT_HEADERS
+    )
+
+    with app.app_context():
+        rows = RiskAssessmentRepository.issued_for_evaluation()
+        report = evaluate_module.evaluate(rows, unavailable("reference_events_unavailable"))
+
+    assert report["status"] == "insufficient_data"
+    assert report["reason"] == "no_reference_events_in_scope"
+    assert report["calibration_status"] == "not_validated"
+    for name in ("precision", "recall", "f1", "false_alert_rate", "missed_event_rate"):
+        assert report["overall"]["metrics"][name]["value"] is None
+
+
 def test_existing_routes_still_present(app):
     rules = {str(rule) for rule in app.url_map.iter_rules()}
     for legacy in (

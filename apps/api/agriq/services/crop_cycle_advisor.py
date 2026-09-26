@@ -12,7 +12,6 @@ from typing import Any, Optional
 from ..core.logging import get_logger
 from ..domain.advisory.crop_stage import stage_advisory
 from ..domain.advisory.recommendation import (
-    ConfidenceResult,
     EvidenceItem,
     Recommendation,
     compute_confidence,
@@ -43,7 +42,6 @@ def build_stage_recommendation(
     stage engine's action list.
     """
     cycle = context.get("crop_cycle") or {}
-    field = context.get("field") or {}
     stage_key = cycle.get("calculated_stage") or cycle.get("farmer_confirmed_stage")
     advisory = stage_advisory(stage_key, cycle.get("crop"))
 
@@ -111,7 +109,7 @@ def _stage_reasons(advisory, weather: Optional[dict[str, Any]], context: dict[st
     stage_label = advisory.stage
     if cycle.get("farmer_confirmed_stage"):
         reasons.append(f"The crop is at the farmer-confirmed {stage_label} stage")
-    elif stage_key := (cycle.get("calculated_stage")):
+    elif cycle.get("calculated_stage"):
         reasons.append(f"The crop is at the calculated {stage_label} stage (farmer confirmation pending)")
     else:
         reasons.append("The crop stage is not confirmed yet")

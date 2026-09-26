@@ -1308,6 +1308,7 @@ button:active{
     margin-top: 10px; font-size: 0.76rem; color: #4b5d52;
 }
 .crop-risk-card__expert { color: #9a3412; font-weight: 700; }
+.crop-risk-card__method { margin-top: 6px; font-size: 0.76rem; color: #4b5d52; }
 .crop-risk-action-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .crop-risk-action-btn {
     border: 1px solid rgba(22, 163, 74, 0.25); border-radius: 999px;
@@ -1321,11 +1322,107 @@ button:active{
 .crop-risk-evidence__source { font-weight: 800; color: #14532d; }
 .crop-risk-evidence__time { color: #64748b; }
 
+/* ---- Phase 6: Farm-to-Market panel (farmer dashboard) ---- */
+.market-area { margin-top: 18px; }
+/* Layout tokens are shared with the risk panel so both read as one product. */
+.market-panel {
+    background: rgba(255, 255, 255, 0.66);
+    border: 1px solid rgba(22, 163, 74, 0.12);
+    border-radius: 24px;
+    padding: 16px;
+    box-shadow: var(--shadow-soft, 0 6px 16px rgba(22, 101, 52, 0.08));
+}
+.market-panel__toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
+}
+.market-panel__crop { font-weight: 800; font-size: 0.9rem; color: #065f46; }
+.market-panel__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.market-refresh-btn {
+    border: 1px solid rgba(22, 163, 74, 0.25); border-radius: 999px;
+    padding: 8px 14px; font-weight: 800; font-size: 0.82rem;
+    background: rgba(34, 197, 94, 0.10); color: #065f46; cursor: pointer;
+    transition: background 160ms ease;
+}
+.market-refresh-btn:hover { background: rgba(34, 197, 94, 0.2); }
+.market-refresh-btn[disabled] { opacity: 0.6; cursor: progress; }
+.market-panel__body { display: grid; gap: 12px; }
+.market-empty, .market-error {
+    font-size: 0.88rem; color: #4b5d52; padding: 10px 12px;
+    border-radius: 14px; background: rgba(255, 255, 255, 0.6);
+}
+.market-error { color: #9a3412; }
+.market-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.78rem; color: #4b5d52; }
+.market-meta__item {
+    padding: 4px 10px; border-radius: 999px;
+    background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(22, 163, 74, 0.14);
+}
+.market-meta__item--warn { background: rgba(249, 115, 22, 0.10); border-color: rgba(249, 115, 22, 0.28); color: #9a3412; }
+.market-card {
+    background: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(22, 163, 74, 0.18);
+    border-radius: 18px; padding: 14px 16px;
+}
+.market-card__head {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+}
+.market-card__title { margin: 0; font-size: 0.98rem; font-weight: 900; color: #14532d; }
+.market-badge {
+    padding: 4px 11px; border-radius: 999px; font-size: 0.74rem; font-weight: 900;
+    border: 1px solid rgba(22, 163, 74, 0.2); background: rgba(34, 197, 94, 0.10);
+    color: #166534; white-space: nowrap;
+}
+.market-badge--rising { background: rgba(34, 197, 94, 0.12); color: #166534; }
+.market-badge--falling { background: rgba(239, 68, 68, 0.12); color: #991b1b; border-color: rgba(239, 68, 68, 0.3); }
+.market-badge--stable { background: rgba(100, 116, 139, 0.12); color: #334155; border-color: rgba(100, 116, 139, 0.3); }
+.market-badge--incomplete { background: rgba(234, 179, 8, 0.14); color: #854d0e; border-color: rgba(234, 179, 8, 0.32); }
+.market-rows { display: grid; gap: 8px; margin-top: 10px; }
+.market-row {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+    gap: 8px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.55);
+}
+.market-row__market { font-weight: 800; color: #14532d; font-size: 0.88rem; }
+.market-row__price { font-weight: 900; color: #065f46; font-size: 0.92rem; }
+.market-row__note { font-size: 0.76rem; color: #4b5d52; }
+.market-row__net { font-size: 0.76rem; color: #334155; }
+.market-card__note { margin: 8px 0 0; font-size: 0.82rem; color: #4b5d52; }
+.market-card__decision { margin: 8px 0 0; font-size: 0.95rem; font-weight: 900; color: #14532d; }
+.market-card__detail { margin: 6px 0 0; padding-left: 18px; font-size: 0.84rem; color: #334155; }
+.market-card__detail li { margin: 3px 0; }
+.market-card__foot {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin-top: 10px; font-size: 0.76rem; color: #4b5d52;
+}
+.market-card__expert { color: #9a3412; font-weight: 700; }
+/* Farmer-supplied sale figures. AGRIQ never pre-fills these: a blank field stays
+   unknown, and only a value the farmer typed can complete a net value. */
+.market-details {
+    margin-bottom: 12px; padding: 10px 12px; border-radius: 14px;
+    border: 1px dashed rgba(22, 163, 74, 0.28); background: rgba(255, 255, 255, 0.5);
+}
+.market-details > summary { cursor: pointer; font-weight: 800; font-size: 0.84rem; color: #065f46; }
+.market-details__grid {
+    display: grid; gap: 10px; margin-top: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+.market-field { display: grid; gap: 4px; font-size: 0.78rem; font-weight: 700; color: #4b5d52; }
+.market-field input, .market-field select {
+    box-sizing: border-box; width: 100%; padding: 8px 10px;
+    font: inherit; font-size: 0.84rem; color: #14532d;
+    border: 1px solid rgba(22, 163, 74, 0.25); border-radius: 12px;
+    background: rgba(255, 255, 255, 0.9);
+}
+.market-field input:focus, .market-field select:focus {
+    outline: 2px solid rgba(22, 163, 74, 0.45); outline-offset: 1px;
+}
+.market-details .market-card__note { margin-top: 10px; }
+
 @media (max-width: 480px) {
-    .crop-risk-panel { padding: 12px; border-radius: 18px; }
-    .crop-risk-card { padding: 12px; }
+    .crop-risk-panel, .market-panel { padding: 12px; border-radius: 18px; }
+    .crop-risk-card, .market-card { padding: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .crop-risk-refresh-btn, .crop-risk-action-btn { transition: none; }
+    .crop-risk-refresh-btn, .crop-risk-action-btn, .market-refresh-btn { transition: none; }
 }

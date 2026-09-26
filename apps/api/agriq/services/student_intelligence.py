@@ -10,26 +10,19 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from ..core.text import has_any
 from ..domain.catalogs.crops import resolve_crop
 from ..domain.catalogs.diseases import DISEASE_LIBRARY
 from ..domain.catalogs.education import (
-    ACADEMIC_LEVELS,
     ANIMAL_LIBRARY,
     CAREER_EXAM_BANK,
-    DOMAIN_FIELD_CONFIG,
     FARMING_METHODS,
-    FIELD_PROBLEM_OPTIONS,
     FERTILIZER_IDENTIFICATION,
     IRRIGATION_METHOD_GUIDES,
-    OUTPUT_FORMATS,
     PEST_LIBRARY,
     PLANT_CATEGORIES,
     SEMESTER_WISE_GUIDE,
     SEED_TECHNOLOGY_GUIDES,
     STUDENT_AREAS,
-    STUDY_DEPTHS,
-    STUDY_PURPOSES,
     WEED_IDENTIFICATION,
 )
 from ..domain.catalogs.soils import SOIL_LIBRARY

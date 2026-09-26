@@ -12,7 +12,7 @@ orchestrator applies its own circuit breaker across turns).
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, Optional
 
 import requests
 

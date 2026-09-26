@@ -29,7 +29,6 @@ def main(argv: list[str] | None = None) -> int:
 
     # App context gives us the configured database and settings.
     from .. import create_app
-    from ..core.config import Config
     from ..integrations.knowledge.ingestion import ingest_manifest
     from ..integrations.knowledge.source_registry import ManifestError
 

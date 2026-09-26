@@ -185,12 +185,95 @@ def test_market_endpoint_never_returns_prices_without_provider(auth_client):
 
 
 def test_market_band_only_via_service_context(auth_client):
-    """The curated band must be labelled as a band, never as live price."""
-    from agriq.services.farm_intelligence import market_advisory
+    """Strengthened in Phase 7 (finding F-05).
+
+    The original guard asserted that the curated band was *labelled* as a band.
+    Phase 7 went further and removed the unsourced band entirely: this module
+    must now produce NO rupee figure at all, and must say so explicitly. Rupee
+    values may only ever come from the AGMARKNET provider through
+    services/market_service.
+    """
+    import json
+
+    from agriq.services.farm_intelligence import market_advisory, profit_impact
 
     advisory = market_advisory("rice", "Cuttack", 50, 80)
-    assert "/ quintal" in advisory["range"]
-    assert "₹" in advisory["range"]
+    assert advisory["available"] is False
+    assert advisory["status"] == "DATA_UNAVAILABLE"
+    assert advisory["range"] is None
+    assert advisory["pressure"] is None
+    assert advisory["message"]
+    assert "₹" not in json.dumps(advisory)
+
+    # Every previously-served band entry, plus a crop that was never in the old
+    # table (the invented (1200, 3200) fallback case), must yield no number.
+    for crop_key in ("rice", "tomato", "sugarcane", "watermelon", "dragonfruit"):
+        assert "₹" not in json.dumps(market_advisory(crop_key, "Cuttack", 50, 80))
+        assert "₹" not in profit_impact(50, crop_key)
+
+
+def test_curated_price_table_is_gone(auth_client):
+    """Phase 7 F-05: the unsourced MARKET_BASELINE table was deleted outright."""
+    import agriq.domain.catalogs.crops as crops
+
+    assert not hasattr(crops, "MARKET_BASELINE")
+
+
+def test_dashboard_offers_no_fabricated_demo_submit(auth_client):
+    """Phase 7 F-02: no production control may auto-submit fabricated context.
+
+    `runDemoCase()` filled crop/district/growth-stage/field-condition with
+    values the farmer never entered and submitted the real analysis form, so
+    fabricated observations were persisted as farmer-reported data. Both the
+    control and its handler must stay gone.
+    """
+    html = auth_client.get("/dashboard").get_data(as_text=True)
+    assert "Run Demo Case" not in html
+    assert "runDemoCase" not in html
+
+    for module in ("leafscan", "app"):
+        js = auth_client.get(f"/static/js/{module}.js").get_data(as_text=True)
+        assert "runDemoCase" not in js, f"{module}.js still defines runDemoCase"
+
+    leafscan_js = auth_client.get("/static/js/leafscan.js").get_data(as_text=True)
+    assert ".submit()" not in leafscan_js
+
+
+def test_dashboard_does_not_render_rupee_estimates(auth_client, csrf_token):
+    """Phase 7 F-05/F-06: no rupee figure without a verified source.
+
+    The impact card used to print "₹X - ₹Y / acre if untreated" (curated price
+    band x risk score) and a "Mandi band (context, not live)" rupee row.
+    """
+    response = auth_client.post(
+        "/dashboard",
+        data={
+            "crop": "Rice", "district": "Cuttack",
+            "growth_stage": "Vegetative", "field_condition": "Normal field",
+            "csrf_token": csrf_token,
+        },
+        content_type="multipart/form-data",
+    )
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    assert "per acre" not in html
+    assert "/ quintal" not in html
+    assert "Mandi band" not in html
+    assert "Rule estimate" in html
+    assert "Indicative bands" in html
+
+
+def test_legacy_confidence_is_labelled_uncalibrated(auth_client, csrf_token):
+    """Phase 7 F-03/F-04: heuristic numbers ship with their honest status."""
+    from agriq.domain.risk.scoring import (
+        confidence_score, confidence_status, heuristic_status, yield_loss_status,
+    )
+
+    assert confidence_status() == "CONFIDENCE_NOT_CALIBRATED"
+    assert yield_loss_status() == "YIELD_IMPACT_NOT_MEASURED"
+    assert heuristic_status() == "HEURISTIC_NOT_VALIDATED"
+    # The screening band itself is unchanged; only its label is now truthful.
+    assert 40 <= confidence_score(70, {"available": True}, {"available": False}, {"x": 20}) <= 94
 
 
 def test_map_data_covers_all_districts_without_fake_selection(auth_client):

@@ -9,9 +9,10 @@ individual analyzer.
 
 ## Status
 
-**Implemented as described here; evaluation not yet validated** (see
-`docs/risk-evaluation.md`). No accuracy, precision or recall figures exist
-because no validated evaluation dataset exists yet — none are fabricated.
+**Implemented as described here; evaluation harness implemented, metrics still
+`insufficient_data`** (see `docs/risk-evaluation.md`). No accuracy, precision or
+recall figures are displayed anywhere because no validated reference-event
+dataset has been executed yet — none are fabricated.
 
 ## Architecture
 
@@ -41,9 +42,11 @@ Modules:
 | `domain/risk_engine/analyzers.py` | the five analyzers (pure functions) |
 | `domain/risk_engine/freshness.py` | fresh/aging/stale/expired classification |
 | `domain/risk_engine/weather_input.py` | normalises weather payload + evidence blocks |
+| `domain/risk_evaluation/` | offline evaluation: protocol, dataset loading, metrics, matcher |
 | `services/risk_service.py` | orchestration, persistence, action tracking |
 | `repositories/risk_repository.py` | owner-scoped, append-only persistence |
 | `api/risk.py` | HTTP routes (auth, ownership, serialisation) |
+| `cli/evaluate_risk.py` | operator CLI that runs the evaluation protocol |
 
 ## Risk types and methodology
 
@@ -104,6 +107,36 @@ when the swing is high. Missing/old records → honest
   product. Stale inputs reduce confidence; missing provenance yields
   confidence 0. The two numbers are stored, returned and displayed separately.
 
+## Assessment method, probability kind and calibration
+
+Three stored provenance fields make the origin of every number explicit, so a
+rule screening can never be read as a validated model probability:
+
+| Field | Values | Meaning today |
+| --- | --- | --- |
+| `assessment_method` | `rule_based` \| `ml` \| `hybrid` | Always `rule_based` — the five analyzers are deterministic rules |
+| `probability_kind` | `rule_score` \| `uncalibrated_ml_probability` \| `calibrated_probability` \| `NULL` | `rule_score` whenever a probability exists; `NULL` when none was produced |
+| `calibration_status` | `not_validated` \| `validated` \| `not_applicable` | `not_validated` for every rule score; `not_applicable` when there is no probability |
+
+The API additionally returns `probability_interpretation`, rebuilt from
+`probability_kind` (never stored, so the wording cannot drift):
+
+> “rule-derived screening estimate from documented thresholds — not a
+> calibrated probability of the event occurring”
+
+A `rule_score` is the fraction of documented screening signals that fired; it
+is **not** “an N % chance that disease/flooding/etc. will occur”. Interpreting
+it that way would require calibration evidence that does not exist yet. If a
+validated model is registered later, `assessment_method` becomes `ml` (or
+`hybrid`) and `calibration_status` can only move to `validated` when the
+evaluation sample genuinely supports it (`domain/risk_evaluation/evaluate.py`
+claims `validated` only when every probability in the sample is a
+`calibrated_probability`).
+
+`probability_kind` deliberately has no database column default: an assessment
+with no probability stores `NULL` rather than being silently labelled
+`rule_score`.
+
 ## Freshness
 
 Weather inputs are classified from **real provider timestamps**:
@@ -132,6 +165,10 @@ never auto-completed; outcomes are farmer-entered facts.
 
 - Screening baselines, not locally validated agronomy.
 - No ML anywhere in the engine; no fabricated evaluation metrics.
+- Probabilities are rule scores, not calibrated probabilities
+  (`calibration_status: not_validated`); the wording says so everywhere.
+- Risk evaluation runs offline against an operator-supplied real reference
+  dataset; until that dataset exists no outcome metric is published.
 - Market volatility needs `DATA_GOV_IN_API_KEY` and ≥ 3 recent official records.
 - Weather forecast rows come from the Open-Meteo payload; a snapshot cached
   before forecast availability yields honest `insufficient_data` for

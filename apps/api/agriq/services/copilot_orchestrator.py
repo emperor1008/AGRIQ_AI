@@ -22,14 +22,11 @@ answer is never presented as AI output.
 """
 from __future__ import annotations
 
-import json
 from typing import Any, Optional
 
 from ..core.config import BaseConfig
 from ..core.logging import get_logger
-from ..core.time import utc_now
 from ..domain.advisory import intent as intent_mod
-from ..domain.advisory.crop_stage import stage_advisory
 from ..domain.advisory.evidence import (
     crop_cycle_evidence,
     guardrail_evidence,
@@ -38,7 +35,12 @@ from ..domain.advisory.evidence import (
     soil_test_evidence,
     weather_evidence,
 )
-from ..domain.advisory.recommendation import Recommendation, compute_confidence
+from ..domain.advisory.recommendation import (
+    ConfidenceResult,
+    EvidenceItem,
+    Recommendation,
+    compute_confidence,
+)
 from ..domain.safety.chemical_rules import check_chemical_request
 from ..domain.safety.escalation import evaluate_escalation
 from ..integrations.ai import gemini
@@ -83,7 +85,7 @@ def run_copilot(
             crop_cycle_id=crop_cycle_id,
             include_weather=False,
         )
-    except PermissionError as exc:
+    except PermissionError:
         return {"ok": False, "error": "not_found",
                 "answer": "That field or crop cycle could not be found for your account."}
     if context is None:
@@ -105,11 +107,15 @@ def run_copilot(
     # -- 6. Tools (only what the intent needs) --------------------------------
     weather = None
     market = None
+    market_intel: dict[str, Any] = {}
     if "weather" in intent.requires_tools:
         weather = _get_weather(context, field.get("id"), profile_id)
         context["weather"] = weather
-    if "market" in intent.requires_tools:
-        market = _get_market(context)
+    if intent.intent == intent_mod.INTENT_CROP_CHOICE:
+        market_intel = _market_intelligence(user_id, context, question,
+                                            capabilities=["crop_options"])
+    elif "market" in intent.requires_tools:
+        market_intel = _market_intelligence(user_id, context, question)
 
     # -- 7. Knowledge retrieval (approved-only, threshold-gated) --------------
     retriever = KnowledgeRetriever()
@@ -168,11 +174,20 @@ def run_copilot(
     guardrail_item = guardrail_evidence(chemical)
     if guardrail_item:
         evidence_items.append(guardrail_item.to_dict())
+    for item in _market_intel_evidence(market_intel):
+        evidence_items.append(item.to_dict())
 
     # -- 10. Structured recommendation from verified context -------------------
     recommendation: Recommendation
     if intent.intent == intent_mod.INTENT_MARKET:
-        recommendation = _market_recommendation(context, market)
+        recommendation = _market_intel_recommendation(market_intel)
+        if recommendation is None:
+            # Phase 6 had nothing usable (for example no crop registered yet):
+            # fall back to the official-record path exactly as before.
+            market = _get_market(context)
+            recommendation = _market_recommendation(context, market)
+    elif intent.intent == intent_mod.INTENT_CROP_CHOICE:
+        recommendation = _crop_choice_recommendation(market_intel)
     elif "weather" in intent.requires_tools and intent.intent != intent_mod.INTENT_IRRIGATION:
         recommendation = build_weather_recommendation(context, weather, intent_type=intent.intent)
     else:
@@ -228,10 +243,11 @@ def run_copilot(
         provider_status = "skipped_emergency"
     else:
         prompt = build_copilot_prompt(
-            question=question, context=context, intent=intent,
+            question=question, context=context,            intent=intent,
             retrieval=retrieval, recommendation=recommendation,
             memory=memory, language=language, escalation=escalation,
             chemical=chemical, response_mode=response_mode,
+            market_intelligence=market_intel,
         )
         provider_result = gemini.generate(
             prompt,
@@ -340,6 +356,8 @@ def run_copilot(
         "recommendation_id": recommendation_id,
         "assistant_message_id": assistant_message_id,
     }
+    if market_intel:
+        payload["market_intelligence"] = _trim_market_intel(market_intel)
     if response_mode == "compact":
         return _compact_payload(payload)
     return payload
@@ -382,17 +400,308 @@ def _get_weather(context: dict[str, Any], field_id: Optional[int], profile_id: i
 
 
 def _get_market(context: dict[str, Any]):
-    from .market_service import get_market_prices
+    from .market_service import get_mandi_prices
     farmer = context.get("farmer") or {}
+    commodity = (context.get("crop_cycle") or {}).get("crop")
+    if not commodity:
+        return {"available": False, "reason": "Official market records need a registered crop."}
     try:
-        return get_market_prices(
-            commodity=(context.get("crop_cycle") or {}).get("crop"),
+        return get_mandi_prices(
+            commodity=commodity,
             district=farmer.get("district"),
-            state=farmer.get("state"),
+            state=farmer.get("state") or "Odisha",
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("market_tool_failed error=%s", type(exc).__name__)
         return {"available": False, "reason": "Official market records are currently unavailable."}
+
+
+#: Cues deciding which Phase 6 capability a market question actually needs. A
+#: question about the price needs one capability, not the whole engine.
+_MARKET_TIMING_CUES = ("sell", "wait", "hold", "store", "keep")
+_MARKET_FORECAST_CUES = ("forecast", "next week", "next month", "expected price",
+                         "future", "predict", "price after")
+_MARKET_COST_CUES = ("transport", "distance", "travel", "logistics", "cost",
+                     "net value", "profit", "freight", "gross")
+_MARKET_COMPARISON_CUES = ("which mandi", "where should i sell", "best price",
+                           "which market", "best mandi", "compare")
+
+#: Verbose blocks dropped from the chat payload; the full payloads live at
+#: ``/api/v1/market/*``.
+_MARKET_PAYLOAD_DROPPED_KEYS = ("series", "quarantined_records")
+
+
+def _market_capabilities(question: str) -> list[str]:
+    """Which Phase 6 capabilities this question needs."""
+    lowered = (question or "").lower()
+    wanted: list[str] = []
+    if any(cue in lowered for cue in _MARKET_TIMING_CUES):
+        wanted.append("timing")
+    if any(cue in lowered for cue in _MARKET_FORECAST_CUES):
+        wanted.append("forecast")
+    if any(cue in lowered for cue in _MARKET_COST_CUES + _MARKET_COMPARISON_CUES):
+        wanted.append("overview")
+    return wanted or ["overview"]
+
+
+def _market_intelligence(
+    user_id: int,
+    context: dict[str, Any],
+    question: str,
+    *,
+    capabilities: Optional[list[str]] = None,
+) -> dict[str, Any]:
+    """Structured Phase 6 results for this turn.
+
+    The model explains these values; it never computes them. Every capability is
+    called inside its own guard so one degradation cannot break the turn, and a
+    failure becomes an explicit ``unavailable`` entry.
+    """
+    from . import market_intelligence as market_intel
+
+    cycle = context.get("crop_cycle") or {}
+    field_id = (context.get("field") or {}).get("id")
+    cycle_id = cycle.get("id")
+    crop = cycle.get("crop")
+    wanted = capabilities or _market_capabilities(question)
+
+    bundle: dict[str, Any] = {"capabilities": wanted, "crop": crop}
+    for capability in wanted:
+        try:
+            if capability == "timing":
+                bundle["sell_hold"] = market_intel.sell_hold(
+                    user_id, field_id=field_id, crop_cycle_id=cycle_id, commodity=crop,
+                )
+            elif capability == "forecast":
+                bundle["forecast"] = market_intel.forecast_prices(
+                    user_id, field_id=field_id, crop_cycle_id=cycle_id, commodity=crop,
+                )
+            elif capability == "crop_options":
+                bundle["crop_options"] = market_intel.crop_options(
+                    user_id, field_id=field_id, crop_cycle_id=cycle_id,
+                    crops=[crop] if crop else None,
+                )
+            else:
+                bundle["overview"] = market_intel.overview(
+                    user_id, field_id=field_id, crop_cycle_id=cycle_id, commodity=crop,
+                )
+        except Exception as exc:  # noqa: BLE001 - degradation must not break a turn
+            logger.warning(
+                "market_intelligence_failed capability=%s error=%s", capability, type(exc).__name__
+            )
+            bundle[capability] = {"ok": False, "status": "unavailable"}
+    return bundle
+
+
+def _trim_market_intel(value: Any) -> Any:
+    """Drop verbose series/row dumps from the chat payload."""
+    if isinstance(value, dict):
+        return {key: _trim_market_intel(item) for key, item in value.items()
+                if key not in _MARKET_PAYLOAD_DROPPED_KEYS}
+    if isinstance(value, list):
+        return [_trim_market_intel(item) for item in value]
+    return value
+
+
+def _market_intel_evidence(bundle: dict[str, Any], limit: int = 3) -> list[EvidenceItem]:
+    """Evidence items for the structured market facts used this turn."""
+    if not bundle:
+        return []
+    items: list[EvidenceItem] = []
+    overview = bundle.get("overview") or {}
+    provenance = overview.get("provenance") or {}
+    for row in (overview.get("latest_prices") or [])[:limit]:
+        items.append(EvidenceItem(
+            type="market_record",
+            source=str(row.get("source") or "AGMARKNET via data.gov.in"),
+            observed_or_retrieved_at=row.get("retrieved_at") or row.get("price_date"),
+            detail=(
+                f"{bundle.get('crop')} modal price {row.get('modal_price')} ₹/quintal at "
+                f"{row.get('market')} on {row.get('price_date')}"
+            ),
+            freshness=str(provenance.get("freshness_status") or "unavailable"),
+        ))
+    forecast = bundle.get("forecast") or {}
+    outcome = forecast.get("forecast") or {}
+    if outcome.get("status") == "ok" and outcome.get("forecast"):
+        first = outcome["forecast"][0]
+        interval = outcome.get("prediction_interval") or {}
+        items.append(EvidenceItem(
+            type="market_forecast",
+            source=f"AGRIQ {outcome.get('model_version')} ({outcome.get('selected_model')})",
+            observed_or_retrieved_at=(forecast.get("provenance") or {}).get("observed_at"),
+            detail=(
+                f"Forecast {first.get('modal_price')} ₹/quintal for {first.get('date')} "
+                f"(interval {interval.get('lower')}-{interval.get('upper')}, "
+                f"out-of-sample dispersion {interval.get('dispersion')})"
+            ),
+            freshness=str((forecast.get("provenance") or {}).get("freshness_status") or "unavailable"),
+        ))
+    timing = bundle.get("sell_hold") or {}
+    if timing.get("decision"):
+        items.append(EvidenceItem(
+            type="market_decision",
+            source="AGRIQ sell/hold decision support",
+            observed_or_retrieved_at=(timing.get("provenance") or {}).get("observed_at"),
+            detail=f"Timing view {timing['decision']} from {len(timing.get('evidence') or [])} evidence point(s).",
+            freshness=str((timing.get("provenance") or {}).get("freshness_status") or "unavailable"),
+        ))
+    options = bundle.get("crop_options") or {}
+    for option in (options.get("options") or [])[:limit]:
+        items.append(EvidenceItem(
+            type="crop_suitability",
+            source="AGRIQ crop catalog + district agro-climatic profile",
+            detail=(
+                f"{option.get('crop_name')}: {option.get('recommendation_status')} "
+                f"(rank {option.get('rank')})"
+            ),
+            freshness="n/a",
+        ))
+    return items
+
+
+def _market_intel_recommendation(bundle: dict[str, Any]) -> Optional[Recommendation]:
+    """Sell/hold → forecast → price recommendation, or None when unusable."""
+    if not bundle:
+        return None
+
+    timing = bundle.get("sell_hold") or {}
+    if timing.get("ok") and timing.get("decision"):
+        decision = str(timing["decision"])
+        if decision == "INSUFFICIENT_DATA":
+            return Recommendation(
+                recommendation_type="market_timing",
+                action=(timing.get("reason") or "Not enough verified market evidence to advise timing"),
+                reasons=[
+                    "Timing advice needs a verified price plus an observed trend, forecast, "
+                    "storage fact or crop risk — the missing items are listed.",
+                ] + list(timing.get("missing_information") or [])[:3],
+                evidence=_market_intel_evidence(bundle),
+                confidence=ConfidenceResult(
+                    level="low", score=0.2,
+                    basis="Evidence is insufficient to support a timing view.",
+                ),
+                missing_information=list(timing.get("missing_information") or []),
+            )
+        observations = [entry["observation"] for entry in (timing.get("evidence") or [])
+                        if entry.get("kind") != "price"][:3]
+        return Recommendation(
+            recommendation_type="market_timing",
+            action=f"Timing view: {decision.replace('_', ' ')}.",
+            reasons=observations or ["Based on the latest official record."],
+            evidence=_market_intel_evidence(bundle),
+            confidence=ConfidenceResult(
+                level="medium", score=0.6,
+                basis=(
+                    "Transparent rule assessment over official records; not calibrated, "
+                    "so no probability is claimed."
+                ),
+            ),
+            requires_expert_confirmation=bool(timing.get("requires_expert_confirmation")),
+            missing_information=list(timing.get("missing_information") or []),
+        )
+
+    forecast = (bundle.get("forecast") or {}).get("forecast") or {}
+    if forecast.get("status") == "ok" and forecast.get("forecast"):
+        first = forecast["forecast"][0]
+        interval = forecast.get("prediction_interval") or {}
+        return Recommendation(
+            recommendation_type="market_forecast",
+            action=(
+                f"Official records project {first.get('modal_price')} ₹/quintal for "
+                f"{first.get('date')}."
+            ),
+            reasons=[
+                f"Model {forecast.get('selected_model')} ({forecast.get('model_version')}), trained "
+                f"on {forecast.get('observations')} official observation date(s).",
+                f"Range {interval.get('lower')}-{interval.get('upper')} ₹/quintal from out-of-sample "
+                "error; not a calibrated interval.",
+            ],
+            evidence=_market_intel_evidence(bundle),
+            confidence=ConfidenceResult(
+                level="medium", score=0.55,
+                basis="Chronological backtest against baselines; probabilities are not calibrated.",
+            ),
+            missing_information=[],
+        )
+
+    overview = bundle.get("overview") or {}
+    prices = overview.get("latest_prices") or []
+    if overview.get("ok") and prices:
+        best = prices[0]
+        return Recommendation(
+            recommendation_type="market_price",
+            action=(
+                f"Latest official modal price for {bundle.get('crop')} is "
+                f"{best.get('modal_price')} ₹/quintal at {best.get('market')} "
+                f"({best.get('price_date')})."
+            ),
+            reasons=[
+                f"{(overview.get('provenance') or {}).get('detail') or 'Official records only.'}",
+                "AGMARKNET publishes provisional daily prices, not live quotes.",
+            ],
+            evidence=_market_intel_evidence(bundle),
+            confidence=ConfidenceResult(
+                level="high", score=0.85,
+                basis="Direct official record; no estimation involved.",
+            ),
+            missing_information=list(overview.get("limitations") or [])[:1],
+        )
+    return None
+
+
+def _crop_choice_recommendation(bundle: dict[str, Any]) -> Recommendation:
+    """Crop-choice advice from the suitability and stored-price engines."""
+    payload = bundle.get("crop_options") or {}
+    options = payload.get("options") or []
+    if not payload.get("ok") or not options:
+        return Recommendation(
+            recommendation_type="crop_choice",
+            action=(
+                payload.get("message")
+                or "AGRIQ cannot judge crop choice without your district and a registered crop cycle."
+            ),
+            reasons=["Crop choice needs the farm district and season from your profile."],
+            evidence=_market_intel_evidence(bundle),
+            confidence=ConfidenceResult(
+                level="low", score=0.2,
+                basis="Required context for crop choice is missing.",
+            ),
+            missing_information=["district", "season"],
+        )
+    top = options[0]
+    market = top.get("market") or {}
+    reasons = list(top.get("reasons") or [])[:3]
+    if market.get("price_context_available"):
+        reasons.append(
+            f"Stored official records for this crop: mean latest modal price "
+            f"{market.get('latest_modal_price')} ₹/quintal from {market.get('markets_reporting')} market(s)."
+        )
+    else:
+        reasons.append(
+            "No official price record is stored for this crop in your district yet, so no price "
+            "comparison is offered."
+        )
+    if top.get("limitation"):
+        reasons.append(str(top["limitation"]))
+    return Recommendation(
+        recommendation_type="crop_choice",
+        action=(
+            f"{top.get('crop_name')} is the best-supported option for {payload.get('district')} "
+            f"this season ({top.get('recommendation_status')})."
+        ),
+        reasons=reasons,
+        evidence=_market_intel_evidence(bundle),
+        confidence=ConfidenceResult(
+            level="low", score=0.3,
+            basis=(
+                "Rule-based agronomic suitability over curated catalogs; not calibrated, so no "
+                "probability is claimed."
+            ),
+        ),
+        requires_expert_confirmation=bool(top.get("requires_expert_confirmation")),
+        missing_information=list(top.get("missing_information") or []),
+    )
 
 
 def _market_recommendation(context: dict[str, Any], market: Optional[dict[str, Any]]) -> Recommendation:
@@ -447,6 +756,7 @@ def build_copilot_prompt(
     escalation,
     chemical,
     response_mode: str,
+    market_intelligence: Optional[dict[str, Any]] = None,
 ) -> str:
     """Build the copilot prompt: verified context in, grounded answer out.
 
@@ -496,8 +806,8 @@ def build_copilot_prompt(
         lines.append("APPROVED KNOWLEDGE EXCERPTS (cite only these):")
         for passage in retrieval.passages:
             lines.append(
-                f"- [{p.source_key}] {p.title} — {p.organisation} "
-                f"(section: {p.section_reference}): {p.content[:400]}"
+                f"- [{passage.source_key}] {passage.title} — {passage.organisation} "
+                f"(section: {passage.section_reference}): {passage.content[:400]}"
             )
     else:
         lines.append("")
@@ -508,6 +818,46 @@ def build_copilot_prompt(
         lines.append("RECENT CONVERSATION (this conversation only):")
         for turn in memory[-4:]:
             lines.append(f"- {turn['role']}: {turn['content'][:200]}")
+
+    if market_intelligence:
+        lines.append("")
+        lines.append("STRUCTURED MARKET INTELLIGENCE (use these values exactly; never recalculate):")
+        summary = _trim_market_intel(market_intelligence)
+        overview = summary.get("overview") or {}
+        for row in (overview.get("latest_prices") or [])[:3]:
+            lines.append(
+                f"- Official record: {row.get('commodity') or summary.get('crop')} "
+                f"{row.get('modal_price')} ₹/quintal at {row.get('market')} on {row.get('price_date')} "
+                f"({row.get('source')})"
+            )
+        trend = overview.get("trend") or {}
+        if trend.get("status") == "ok":
+            lines.append(
+                f"- Trend: {trend.get('direction')} {trend.get('change_percent')}% over "
+                f"{trend.get('points')} official observation date(s)"
+            )
+        elif overview:
+            lines.append(f"- Trend unavailable: {trend.get('reason')}")
+        timing = summary.get("sell_hold") or {}
+        if timing.get("decision"):
+            lines.append(f"- Timing view: {timing.get('decision')} ({timing.get('decision_basis')})")
+        forecast = (summary.get("forecast") or {}).get("forecast") or {}
+        if forecast.get("status") == "ok" and forecast.get("forecast"):
+            first = forecast["forecast"][0]
+            lines.append(
+                f"- Forecast ({forecast.get('selected_model')}): {first.get('modal_price')} "
+                f"₹/quintal for {first.get('date')}"
+            )
+        elif forecast.get("status"):
+            lines.append(f"- Forecast withheld: {forecast.get('reason')}")
+        options = summary.get("crop_options") or {}
+        for option in (options.get("options") or [])[:4]:
+            lines.append(
+                f"- Crop option: {option.get('crop_name')} — {option.get('recommendation_status')}"
+            )
+        provider = overview.get("provider") or (summary.get("forecast") or {}).get("provider")
+        if provider:
+            lines.append(f"- Provider state: {provider}")
 
     lines.extend([
         "",

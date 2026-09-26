@@ -30,6 +30,41 @@ VALID_STATUSES = (
     "insufficient_data",
 )
 
+# ---------------------------------------------------------------------------
+# Assessment-method provenance (§7, §17, §20)
+# ---------------------------------------------------------------------------
+#: Which kind of machinery produced the numbers. The five analyzers shipped
+#: today are deterministic rules, so every live assessment is ``rule_based``.
+#: ``ml`` / ``hybrid`` are representable so a validated, registered model can
+#: replace an analyzer later WITHOUT any caller having to guess provenance.
+ASSESSMENT_METHODS = ("rule_based", "ml", "hybrid")
+
+#: What the ``probability`` number actually is. A rule score is a documented
+#: deterministic screening estimate; it is NOT a calibrated event
+#: probability and must never be described as one (§5).
+PROBABILITY_KINDS = ("rule_score", "uncalibrated_ml_probability", "calibrated_probability")
+
+#: Calibration status of the produced number (§17). "not_validated" is the
+#: truthful value until a real evaluation supports the interpretation.
+CALIBRATION_STATUSES = ("not_validated", "validated", "not_applicable")
+
+#: Human-readable explanation of what a probability number means, shown next
+#: to the number itself so it can never be read as a calibrated guarantee.
+PROBABILITY_INTERPRETATION = {
+    "rule_score": (
+        "rule-derived screening estimate from documented thresholds — not a "
+        "calibrated probability of the event occurring"
+    ),
+    "uncalibrated_ml_probability": (
+        "model output that has not passed calibration review — do not read it "
+        "as a calibrated event probability"
+    ),
+    "calibrated_probability": (
+        "calibrated probability; interpretation is supported only for the "
+        "validated evaluation scope recorded with the model"
+    ),
+}
+
 
 @dataclass
 class Evidence:
@@ -72,6 +107,13 @@ class Assessment:
     data_quality: dict[str, Any] = field(default_factory=dict)
     requires_expert_confirmation: bool = False
     unavailable_reason: Optional[str] = None
+    #: Producing machinery: rule_based | ml | hybrid (§7).
+    assessment_method: str = "rule_based"
+    #: What ``probability`` is: rule_score | uncalibrated_ml_probability |
+    #: calibrated_probability. None when no probability was produced (§5).
+    probability_kind: Optional[str] = "rule_score"
+    #: Calibration state of ``probability`` (§17).
+    calibration_status: str = "not_validated"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -90,6 +132,12 @@ class Assessment:
             "data_quality": dict(self.data_quality),
             "requires_expert_confirmation": self.requires_expert_confirmation,
             "unavailable_reason": self.unavailable_reason,
+            "assessment_method": self.assessment_method,
+            "probability_kind": self.probability_kind,
+            "calibration_status": self.calibration_status,
+            "probability_interpretation": (
+                PROBABILITY_INTERPRETATION.get(self.probability_kind) if self.probability_kind else None
+            ),
         }
 
 
@@ -101,6 +149,9 @@ def unavailable(risk_type: str, reason: str, evidence: list[Evidence] | None = N
         unavailable_reason=reason,
         evidence=evidence or [],
         data_quality={"inputs_available": False, "reason": reason},
+        # No probability was produced at all, so there is nothing to calibrate.
+        probability_kind=None,
+        calibration_status="not_applicable",
     )
 
 
@@ -112,6 +163,8 @@ def insufficient(risk_type: str, reason: str, evidence: list[Evidence] | None = 
         unavailable_reason=reason,
         evidence=evidence or [],
         data_quality={"inputs_available": True, "sufficient": False, "reason": reason},
+        probability_kind=None,
+        calibration_status="not_applicable",
     )
 
 
@@ -137,6 +190,10 @@ __all__ = [
     "RISK_TYPES",
     "SUPPORTED_CROPS",
     "VALID_STATUSES",
+    "ASSESSMENT_METHODS",
+    "PROBABILITY_KINDS",
+    "CALIBRATION_STATUSES",
+    "PROBABILITY_INTERPRETATION",
     "Evidence",
     "Assessment",
     "unavailable",

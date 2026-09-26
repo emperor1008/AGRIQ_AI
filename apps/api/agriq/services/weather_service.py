@@ -7,10 +7,10 @@ hash so identical provider payloads are not stored repeatedly.
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any, Mapping, Optional
 
 from ..core.logging import get_logger
-from ..core.time import as_utc, iso_utc, parse_provider_time, utc_now
+from ..core.time import as_utc, parse_provider_time, utc_now
 from ..extensions import db
 from ..integrations.weather import open_meteo
 from ..models.farmer import WeatherSnapshot

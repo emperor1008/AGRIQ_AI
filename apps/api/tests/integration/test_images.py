@@ -260,12 +260,15 @@ class TestMigrationChain:
         cfg.set_main_option("script_location", str(API_DIR / "migrations"))
         return cfg
 
-    def test_head_is_0005_phase5_risk(self):
-        """Phase 5 adds 0005_phase5_risk on top of the Phase 4 head."""
+    def test_head_is_the_latest_phase5_revision(self):
+        """Phase 5 owns the head: 0005 creates the table, 0006 adds provenance."""
         from alembic.script import ScriptDirectory
 
         script = ScriptDirectory.from_config(self._alembic_cfg())
-        assert script.get_heads() == ["0005_phase5_risk"]
+        assert script.get_heads() == ["0006_risk_provenance"]
+        # The Phase 5 chain is intact and ordered, not merely present.
+        assert script.get_revision("0006_risk_provenance").down_revision == "0005_phase5_risk"
+        assert script.get_revision("0005_phase5_risk").down_revision == "0004_phase4_image"
 
     def test_upgrade_downgrade_cycle_on_clean_db(self, tmp_path):
         """Full upgrade → downgrade → upgrade against an isolated SQLite file."""

@@ -154,4 +154,50 @@ def iso_or_none(value: Any) -> str | None:
     return str(value) if value else None
 
 
-__all__ = ["get_mandi_prices"]
+def stored_history(
+    commodity: str,
+    *,
+    district: str | None = None,
+    state: str | None = None,
+    since_days: int = 180,
+    limit: int = 2000,
+) -> list[dict[str, Any]]:
+    """Official records already persisted, as a real dated price history (Phase 6).
+
+    This is the only price history AGRIQ has: rows actually returned by the
+    provider and stored over time. Nothing is backfilled, interpolated or
+    synthesised, so a thin history stays thin — trend and forecast features then
+    report that they lack data instead of inventing a series.
+    """
+    from datetime import timedelta
+
+    from ..core.time import utc_now
+
+    cutoff = (utc_now() - timedelta(days=max(1, since_days))).date()
+    query = (
+        db.select(MarketPriceRecord)
+        .where(MarketPriceRecord.commodity.isnot(None))
+        .where(MarketPriceRecord.arrival_date >= cutoff)
+        .order_by(MarketPriceRecord.arrival_date.asc(), MarketPriceRecord.id.asc())
+        .limit(limit)
+    )
+    if district:
+        query = query.where(MarketPriceRecord.district == district)
+    if state:
+        query = query.where(MarketPriceRecord.state == state)
+
+    # Resolve through the catalog so provider names ("Paddy(Dhan)(Common)")
+    # and catalog keys/names ("rice", "Rice") compare correctly.
+    from ..domain.market.normalization import resolve_commodity
+
+    rows = list(db.session.execute(query).scalars())
+    target_key = (resolve_commodity(commodity) or (commodity or "").strip().lower())
+    matched: list[dict[str, Any]] = []
+    for row in rows:
+        if target_key and (resolve_commodity(row.commodity) or "").lower() != target_key:
+            continue
+        matched.append(_record_to_dict(row))
+    return matched
+
+
+__all__ = ["get_mandi_prices", "stored_history"]

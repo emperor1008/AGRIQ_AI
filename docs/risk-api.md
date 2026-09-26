@@ -61,6 +61,13 @@ Response (abridged):
       "requires_expert_confirmation": true,
       "unavailable_reason": null,
       "rule_version": "agriq-risk-rules-v1",
+      "assessment_method": "rule_based",
+      "probability_kind": "rule_score",
+      "calibration_status": "not_validated",
+      "probability_interpretation": "rule-derived screening estimate from documented thresholds — not a calibrated probability of the event occurring",
+      "crop": "Rice",
+      "growth_stage": "Fruiting / Grain Filling",
+      "district": "Cuttack",
       "generated_at": "…", "valid_until": "…"
     }
   ],
@@ -71,6 +78,21 @@ Response (abridged):
 Statuses: `inactive | monitor | elevated | high | critical |
 data_unavailable | insufficient_data`. `probability` and `confidence` are
 independent numbers; both are `null` when inputs are unavailable.
+
+### Provenance and interpretation
+
+| Field | Values | Notes |
+| --- | --- | --- |
+| `assessment_method` | `rule_based` \| `ml` \| `hybrid` | `rule_based` for every assessment today |
+| `probability_kind` | `rule_score` \| `uncalibrated_ml_probability` \| `calibrated_probability` \| `null` | `null` when no probability was produced |
+| `calibration_status` | `not_validated` \| `validated` \| `not_applicable` | `not_validated` for rule scores |
+| `probability_interpretation` | string \| `null` | Derived from `probability_kind`; states what the number is **not** |
+| `crop`, `growth_stage`, `district` | string \| `null` | Context snapshotted at analysis time, used as evaluation dimensions |
+
+`probability` is a **rule score**, never a calibrated event probability. A
+client must not render it as an N % chance of the event happening; render
+`probability_interpretation` next to the number (the dashboard does exactly
+that).
 
 Rate limit: `AGRIQ_RATE_ANALYSIS` (default 20/minute).
 
@@ -111,6 +133,24 @@ Record the farmer's response through the existing farmer-actions flow.
 Errors: 400 invalid status, 404 foreign/missing assessment.
 
 ---
+
+## Offline evaluation (no HTTP route)
+
+Risk evaluation is deliberately **not** exposed over HTTP: it would either leak
+cross-farmer data or require an operator-only surface on the farmer API. It runs
+as an operator CLI instead:
+
+```bash
+cd apps/api
+python -m agriq.cli.evaluate_risk --events /path/to/reference_events.json
+python -m agriq.cli.evaluate_risk --since 2026-01-01 --out report.json
+python -m agriq.cli.evaluate_risk            # prints an honest insufficient_data report
+```
+
+See `docs/risk-evaluation.md` for the protocol, the metric definitions and the
+current (unvalidated) status. The CLI reads every assessment ever issued,
+includes superseded rows, writes nothing to the database, and emits no farmer
+identifiers.
 
 ## Legacy compatibility
 

@@ -22,7 +22,6 @@ from typing import Any, Optional
 
 from ...core.time import utc_now
 from ...repositories.copilot_repository import KnowledgeRepository
-from ...models.knowledge import KnowledgeSource
 
 # Environment-configurable minimum relevance (0-1). Below this, "no approved
 # evidence" is returned rather than weak matches.

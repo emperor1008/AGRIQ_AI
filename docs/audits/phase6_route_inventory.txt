@@ -1,0 +1,84 @@
+Phase 6 route inventory (69 routes registered by create_app()).
+
+Captured 2026-09-25 from apps/api:
+  python -c "from agriq import create_app; from agriq.core.config import TestingConfig; \
+             [print(m, r.rule) for r in create_app(TestingConfig()).url_map.iter_rules() \
+              if r.endpoint != 'static' for m in sorted(r.methods - {'HEAD','OPTIONS'})]"
+
+Phase 5 baseline: 63 routes (docs/audits/phase5_route_inventory_baseline.txt).
+Phase 6 adds exactly 7 additive routes (the /api/v1/market/* endpoints below) and
+changes NO existing route: every path/method registered before this work is still
+registered, which the pre-existing regression tests assert
+(tests/integration/test_risk.py::test_existing_routes_still_present,
+tests/integration/test_images.py::TestRouteRegression — both green).
+
+TOTAL 69 routes
+DELETE /api/v1/crop-images/analyses/<int:analysis_id>
+DELETE /api/v1/voice/sessions/<session_ref>/audio
+GET   /
+GET   /api/crop-cycles/<int:cycle_id>
+GET   /api/crop-cycles/<int:cycle_id>/observations
+GET   /api/csrf-token
+GET   /api/farmer-context
+GET   /api/farms
+GET   /api/farms/<int:farm_id>
+GET   /api/farms/<int:farm_id>/fields
+GET   /api/fields/<int:field_id>
+GET   /api/fields/<int:field_id>/crop-cycles
+GET   /api/fields/<int:field_id>/soil-tests
+GET   /api/live-weather
+GET   /api/market-prices
+GET   /api/profile
+GET   /api/v1/copilot/conversations/<conversation_ref>
+GET   /api/v1/crop-images/analyses/<int:analysis_id>
+GET   /api/v1/crop-images/capabilities
+GET   /api/v1/market/demand
+GET   /api/v1/market/evidence
+GET   /api/v1/market/forecast
+GET   /api/v1/market/overview
+GET   /api/v1/recommendations/<int:recommendation_id>
+GET   /api/v1/risk/assessments/<int:risk_id>
+GET   /api/v1/risk/fields/<int:field_id>/current
+GET   /api/v1/risk/fields/<int:field_id>/history
+GET   /api/v1/voice/audio/<audio_ref>
+GET   /api/v1/voice/capabilities
+GET   /api/v1/voice/consent
+GET   /api/v1/voice/sessions/<session_ref>/transcription
+GET   /choose
+GET   /dashboard
+GET   /healthz
+GET   /logout
+PATCH /api/crop-cycles/<int:cycle_id>
+PATCH /api/farms/<int:farm_id>
+PATCH /api/fields/<int:field_id>
+PATCH /api/profile
+POST  /api/crop-cycles/<int:cycle_id>/archive
+POST  /api/crop-cycles/<int:cycle_id>/confirm-stage
+POST  /api/crop-cycles/<int:cycle_id>/observations
+POST  /api/farms
+POST  /api/farms/<int:farm_id>/archive
+POST  /api/farms/<int:farm_id>/fields
+POST  /api/fields/<int:field_id>/archive
+POST  /api/fields/<int:field_id>/crop-cycles
+POST  /api/fields/<int:field_id>/soil-tests
+POST  /api/profile
+POST  /api/v1/copilot/messages
+POST  /api/v1/crop-images/analyse
+POST  /api/v1/crop-images/analyses/<int:analysis_id>/feedback
+POST  /api/v1/crop-images/analyses/<int:analysis_id>/request-expert-review
+POST  /api/v1/market/crop-options
+POST  /api/v1/market/logistics
+POST  /api/v1/market/sell-hold
+POST  /api/v1/recommendations/<int:recommendation_id>/feedback
+POST  /api/v1/risk/assessments/<int:risk_id>/action
+POST  /api/v1/risk/fields/<int:field_id>/analyze
+POST  /api/v1/voice/consent
+POST  /api/v1/voice/consent/revoke
+POST  /api/v1/voice/sessions
+POST  /api/v1/voice/sessions/<session_ref>/ask
+POST  /api/v1/voice/sessions/<session_ref>/audio
+POST  /api/v1/voice/sessions/<session_ref>/confirm
+POST  /api/v1/voice/synthesise
+POST  /ask-ai
+POST  /choose-mode
+POST  /login

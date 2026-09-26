@@ -23,12 +23,23 @@ source and freshness, confidence in words (Low / Moderate / Higher), and —
 when warranted — an expert-confirmation note. Below every actionable card the
 farmer can record **Will do / Did it / Not now / Need help**.
 
+## What the likelihood number means
+
+Every card that shows a likelihood also shows, in plain words, what the number
+is: a **rule-derived screening estimate from documented thresholds — not a
+calibrated probability** of the event occurring. The card footer states the
+assessment method ("Rule-based screening" today) so a screening can never be
+mistaken for a validated model output. Those two strings come from the backend
+(`probability_interpretation`, `assessment_method`); the panel renders them
+verbatim and never composes its own wording.
+
 ## Honest states
 
 | Situation | What is shown |
 | --- | --- |
 | No elevated risk | "No elevated risk detected from the latest verified data." |
 | Weather provider down | Card shows "There is not enough verified data available…" and confidence is null |
+| No validated evaluation data | No accuracy/recall/calibration figure is shown anywhere — see `docs/risk-evaluation.md` |
 | Crop not rice/tomato | "Data unavailable" with the reason recorded, never extrapolated advice |
 | Fewer than 3 recent official market records | "Insufficient data" — no synthetic prices |
 | Stale weather | Freshness label ("stale") plus reduced confidence |

@@ -15,14 +15,13 @@ from . import thresholds, weather_input
 
 from .base import (
     Assessment,
-    Evidence,
     RISK_TYPES,
     SUPPORTED_CROPS,
     confidence_from,
     insufficient,
     unavailable,
 )
-from .freshness import classify, confidence_factor
+from .freshness import confidence_factor
 
 _LEAD_HOURS = {
     "disease_conducive_weather": 24,

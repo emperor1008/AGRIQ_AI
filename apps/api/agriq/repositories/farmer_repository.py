@@ -22,7 +22,6 @@ from ..models.farmer import (
     Recommendation,
     SoilTest,
 )
-from ..models.user import User
 
 
 class ProfileRepository:

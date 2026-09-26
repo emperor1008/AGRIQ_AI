@@ -1,10 +1,10 @@
 """Farmer analysis request schema (district/crop/stage/condition allowlists)."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
-from ..domain.catalogs.crops import GROWTH_STAGES, FIELD_CONDITIONS, resolve_crop
+from ..domain.catalogs.crops import GROWTH_STAGES, FIELD_CONDITIONS
 
 MAX_CROP_NAME = 60
 

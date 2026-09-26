@@ -48,7 +48,10 @@ def create_app(config_object=None) -> Flask:
     db.init_app(app)
 
     # Blueprints -----------------------------------------------------------
-    from .api import assistant, auth, copilot, dashboard, errors, farmer_data, health, images, risk, voice, weather
+    from .api import (
+        assistant, auth, copilot, dashboard, errors, farmer_data, health, images,
+        market_intel, risk, voice, weather,
+    )
 
     app.register_blueprint(health.health_bp)
     app.register_blueprint(auth.auth_bp)
@@ -60,6 +63,7 @@ def create_app(config_object=None) -> Flask:
     app.register_blueprint(voice.voice_bp)
     app.register_blueprint(images.image_bp)
     app.register_blueprint(risk.risk_bp)
+    app.register_blueprint(market_intel.market_bp)
     app.register_blueprint(errors.errors_bp)
 
     _apply_rate_limits(app)
@@ -86,6 +90,21 @@ def create_app(config_object=None) -> Flask:
         from .api.risk import analyze as risk_analyze
 
         limiter.limit(app.config.get("AGRIQ_RATE_ANALYSIS", "20 per minute"))(risk_analyze)
+
+        # Phase 6: market intelligence shares the analysis budget (reads reuse
+        # cached provider payloads; decision endpoints do real work).
+        from .api.market_intel import (
+            get_forecast as market_forecast,
+            get_overview as market_overview,
+            post_crop_options as market_crop_options,
+            post_logistics as market_logistics,
+            post_sell_hold as market_sell_hold,
+        )
+
+        market_limit = app.config.get("AGRIQ_RATE_ANALYSIS", "20 per minute")
+        for view in (market_overview, market_forecast, market_crop_options,
+                     market_sell_hold, market_logistics):
+            limiter.limit(market_limit)(view)
 
     return app
 

@@ -58,6 +58,77 @@ Last reviewed: 2026-09-22.
 - Market answers show only official AGMARKNET records; absence of records is
   shown as "Official matching records unavailable."
 
+## Phase 6 provenance commitments
+
+- Every market payload carries a `provenance` block (source, observed/price
+date, retrieval time, freshness status, `is_live: false`) plus a `provider`
+block that names the failure state (`api_key_not_configured`,
+`provider_request_failed`) instead of silently substituting data.
+- Forecasts are **AGRIQ model output over stored official observations**, not
+provider forecasts, and each one carries its training/validation/evaluation
+periods, model version, candidate metrics and whether it beat the naive
+baseline. Below the documented minimum history the capability reports
+`insufficient_data`.
+- Every record that fails the data-quality gate is reported in
+`quarantined_records` with its reason and excluded from all arithmetic —
+suspicious values are never corrected in place.
+- `confidence.status = "not_calibrated"` appears on every market
+crop-choice, timing and forecast payload together with the basis in words; no
+accuracy, probability or calibration figure is claimed.
+- Cost and quantity inputs are declared farmer-supplied (`cost_provenance`);
+AGRIQ has no verified freight, input-cost or yield source and never estimates
+them, so a net value is published only when every component is known. A blank
+cost field stays unknown (`NET_VALUE_INCOMPLETE`) while an explicit `0` is a known
+zero, and a farmer-supplied freight total is used in preference to the rate ×
+distance estimate, with `transport_cost_basis` recording which path applied.
+- Demand is reported unavailable because the configured resource publishes
+prices, not arrival quantities — no proxy percentage is produced.
+
+## Phase 7 provenance commitments (P7-1 — honest-data corrections)
+
+These changes removed the last unsourced numbers the farmer could see on
+`/dashboard`. Each one is enforced by a test so it cannot regress.
+
+- **The curated price table was deleted.** A hand-maintained
+`MARKET_BASELINE` map of ₹/quintal bands for 26 crops used to be rendered as a
+rupee price range, and it applied an invented fallback band to any crop missing
+from the table. It recorded no source, citation, retrieval date, licence or
+update frequency, so it could not be labelled honestly and was removed rather
+than relabelled (`domain/catalogs/crops.py`). Rupee values now come **only**
+from the AGMARKNET provider via `services/market_service` /
+`services/market_intelligence`; the dashboard's market block returns
+`DATA_UNAVAILABLE` with no number. Guarded by
+`tests/security/test_security.py::test_market_band_only_via_service_context`
+and `tests/unit/test_phase7_honest_states.py`.
+- **The rupee impact figure was removed.** `profit_impact()` used to chain the
+curated band and the risk score into "₹X - ₹Y / acre if untreated". It now
+returns an explicit not-estimated statement, because a rupee amount a farmer
+might act on cannot be produced from yield, cost and price data AGRIQ does not
+have.
+- **Fabricated farmer context can no longer be submitted.** The dashboard's
+"Run Demo Case" control filled crop, district, growth stage and field condition
+with values the farmer never entered and auto-submitted the real analysis form,
+so fabricated observations were persisted as farmer-reported data. The control
+and its handler were deleted (`templates/dashboard/index.html`,
+`web/static/js/leafscan.js`, `web/static/js/app.js`). The remaining
+"Run Student Demo" only pre-fills *form inputs* that the user then reviews and
+submits deliberately; it writes no record and asserts no observation.
+- **Rule-based numbers now carry their own status.** The risk score, crop
+health, yield protection, indicative loss band and screening confidence are
+hand-weighted heuristics, not measurements. They are published together with
+`heuristic_status` (`HEURISTIC_NOT_VALIDATED`), `confidence_status`
+(`CONFIDENCE_NOT_CALIBRATED`), `yield_loss_status`
+(`YIELD_IMPACT_NOT_MEASURED`) and a plain-language basis string, and the UI
+labels them ("Rule estimate — not measured", "Indicative bands — not
+measured", "Early-action scenario (illustrative, not a forecast)"). The
+formulas are reproduced verbatim in `docs/dashboard-heuristics.md`.
+- **Image screening confidence is labelled.** `services/leaf_analysis.py`
+returns a colour-pattern screening band, published with
+`confidence_status = "PROBABILITY_NOT_CALIBRATED"` and its basis; an image with
+too little leaf area is marked `IMAGE_ANALYSIS_UNCERTAIN` instead of being
+forced into a symptom band. Trained-model inference still reports an honest
+unavailable state because no model is registered.
+
 ## UI provenance requirements (implemented)
 
 Every live-data component shows source, last-updated time and state

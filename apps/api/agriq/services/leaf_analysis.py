@@ -3,17 +3,33 @@
 This is a colour-pattern heuristic over the uploaded image using Pillow.
 It is explicitly NOT a trained crop-disease model and its output is
 presented in the UI as visual symptom *screening*, never diagnosis.
+
+Honest status (Phase 7 §15/§31): the numeric ``confidence`` field is a
+**rule-based screening band**, never a calibrated probability. It is always
+published with ``confidence_status`` (``PROBABILITY_NOT_CALIBRATED``) and
+``confidence_basis``. When the image has too little leaf area to screen, the
+result is marked ``IMAGE_ANALYSIS_UNCERTAIN`` rather than forced into a
+symptom band. Trained-model inference, with its own approval and calibration
+gates, lives in ``ml/inference`` and reports an honest unavailable state until
+a model is registered.
 """
 from __future__ import annotations
 
 import base64
 import colorsys
 import io
-from typing import Any, BinaryIO
+from typing import Any
 
 from PIL import Image, UnidentifiedImageError
 
-from ..core.constants import ALLOWED_UPLOAD_EXTENSIONS, MAX_UPLOAD_BYTES
+from ..core.constants import (
+    ALLOWED_UPLOAD_EXTENSIONS,
+    BASIS_IMAGE_COLOUR_HEURISTIC,
+    MAX_UPLOAD_BYTES,
+    TOKEN_DATA_UNAVAILABLE,
+    TOKEN_IMAGE_ANALYSIS_UNCERTAIN,
+    TOKEN_PROBABILITY_NOT_CALIBRATED,
+)
 from ..core.exceptions import InvalidImageError
 from ..domain.risk.scoring import clamp
 
@@ -28,6 +44,9 @@ def empty_result() -> dict[str, Any]:
         "preview": None,
         "symptom": "No image uploaded",
         "confidence": 0,
+        "confidence_status": TOKEN_DATA_UNAVAILABLE,
+        "confidence_basis": BASIS_IMAGE_COLOUR_HEURISTIC,
+        "uncertain": False,
         "green_pct": 0,
         "yellow_pct": 0,
         "brown_pct": 0,
@@ -111,6 +130,11 @@ def analyze_leaf_image(file_storage: Any) -> dict[str, Any]:
             "preview": preview_b64,
             "symptom": "Unclear leaf area",
             "confidence": 38,
+            # Phase 7 §15: too little leaf area to screen — say so instead of
+            # forcing a symptom band.
+            "confidence_status": TOKEN_IMAGE_ANALYSIS_UNCERTAIN,
+            "confidence_basis": BASIS_IMAGE_COLOUR_HEURISTIC,
+            "uncertain": True,
             "green_pct": 0,
             "yellow_pct": 0,
             "brown_pct": 0,
@@ -149,6 +173,9 @@ def analyze_leaf_image(file_storage: Any) -> dict[str, Any]:
         "preview": preview_b64,
         "symptom": symptom,
         "confidence": int(confidence),
+        "confidence_status": TOKEN_PROBABILITY_NOT_CALIBRATED,
+        "confidence_basis": BASIS_IMAGE_COLOUR_HEURISTIC,
+        "uncertain": False,
         "green_pct": green_pct,
         "yellow_pct": yellow_pct,
         "brown_pct": brown_pct,

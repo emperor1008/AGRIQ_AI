@@ -16,7 +16,6 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 
 from ..core.audit import audit_event
-from ..core.config import get_config
 from ..core.exceptions import NotFoundError, ValidationError
 from ..core.logging import get_logger
 from ..core.security import current_user, require_csrf

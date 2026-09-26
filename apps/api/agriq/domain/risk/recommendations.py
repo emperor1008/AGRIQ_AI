@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from ...core.constants import BASIS_RULE_HEURISTIC, TOKEN_HEURISTIC_NOT_VALIDATED
 from ..catalogs.districts import profile_for
 from .scoring import clamp, risk_status, yield_loss_band
 from .scoring import urgency as urgency_label
@@ -48,7 +49,14 @@ def action_plan(score: float, crop: Mapping[str, Any], growth_stage: str, field_
 
 
 def before_after(score: float) -> dict[str, Any]:
-    """Before/after comparison shown on the impact card."""
+    """Before/after comparison shown on the impact card.
+
+    Honest status (Phase 7 §2): the "after action" figure is an **illustrative
+    scenario** (−18 points from the current heuristic score), not a forecast.
+    AGRIQ holds no treatment-response data, so this cannot be presented as a
+    predicted outcome — it carries ``status`` and ``basis`` and the UI labels it
+    "illustrative, not a forecast".
+    """
     reduced = int(clamp(score - 18, 15, 88))
     if score >= 70:
         potential = "High"
@@ -60,6 +68,8 @@ def before_after(score: float) -> dict[str, Any]:
         "untreated": yield_loss_band(score),
         "after_action_risk": f"{reduced}% • {risk_status(reduced)}",
         "protection": potential,
+        "status": TOKEN_HEURISTIC_NOT_VALIDATED,
+        "basis": BASIS_RULE_HEURISTIC,
         "message": "Early scouting and correct preventive action can reduce spread before yield loss becomes serious.",
     }
 

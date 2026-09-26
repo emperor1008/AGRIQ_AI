@@ -1,0 +1,75 @@
+Phase 5 route inventory baseline (63 routes registered by create_app()).
+Captured 2026-09-24 from apps/api with:
+  python -c "from agriq import create_app; from agriq.core.config import TestingConfig; \
+             [print(sorted(r.methods), r.rule) for r in create_app(TestingConfig()).url_map.iter_rules()]"
+
+Phase 5 changed NO existing route: the five risk routes below are additive, and
+every route present before Phase 5 is still registered with the same methods
+(asserted by tests/integration/test_risk.py::test_existing_routes_still_present
+and test_images.py::TestRouteRegression).
+
+TOTAL 63
+
+['GET'] /                                                                       
+['GET'] /api/crop-cycles/<int:cycle_id>                                         
+['PATCH'] /api/crop-cycles/<int:cycle_id>                                       
+['POST'] /api/crop-cycles/<int:cycle_id>/archive                                
+['POST'] /api/crop-cycles/<int:cycle_id>/confirm-stage                          
+['GET'] /api/crop-cycles/<int:cycle_id>/observations                            
+['POST'] /api/crop-cycles/<int:cycle_id>/observations                           
+['GET'] /api/csrf-token                                                         
+['GET'] /api/farmer-context                                                     
+['GET'] /api/farms                                                              
+['POST'] /api/farms                                                             
+['GET'] /api/farms/<int:farm_id>                                                
+['PATCH'] /api/farms/<int:farm_id>                                              
+['POST'] /api/farms/<int:farm_id>/archive                                       
+['GET'] /api/farms/<int:farm_id>/fields                                         
+['POST'] /api/farms/<int:farm_id>/fields                                        
+['GET'] /api/fields/<int:field_id>                                              
+['PATCH'] /api/fields/<int:field_id>                                            
+['POST'] /api/fields/<int:field_id>/archive                                     
+['GET'] /api/fields/<int:field_id>/crop-cycles                                  
+['POST'] /api/fields/<int:field_id>/crop-cycles                                 
+['GET'] /api/fields/<int:field_id>/soil-tests                                   
+['POST'] /api/fields/<int:field_id>/soil-tests                                  
+['GET'] /api/live-weather                                                       
+['GET'] /api/market-prices                                                      
+['GET'] /api/profile                                                            
+['PATCH'] /api/profile                                                          
+['POST'] /api/profile                                                           
+['GET'] /api/v1/copilot/conversations/<conversation_ref>                        
+['POST'] /api/v1/copilot/messages                                               
+['POST'] /api/v1/crop-images/analyse                                            
+['DELETE'] /api/v1/crop-images/analyses/<int:analysis_id>                       
+['GET'] /api/v1/crop-images/analyses/<int:analysis_id>                          
+['POST'] /api/v1/crop-images/analyses/<int:analysis_id>/feedback                
+['POST'] /api/v1/crop-images/analyses/<int:analysis_id>/request-expert-review   
+['GET'] /api/v1/crop-images/capabilities                                        
+['GET'] /api/v1/recommendations/<int:recommendation_id>                         
+['POST'] /api/v1/recommendations/<int:recommendation_id>/feedback               
+['GET'] /api/v1/risk/assessments/<int:risk_id>                                  # Phase 5 (additive)
+['POST'] /api/v1/risk/assessments/<int:risk_id>/action                          # Phase 5 (additive)
+['POST'] /api/v1/risk/fields/<int:field_id>/analyze                             # Phase 5 (additive)
+['GET'] /api/v1/risk/fields/<int:field_id>/current                              # Phase 5 (additive)
+['GET'] /api/v1/risk/fields/<int:field_id>/history                              # Phase 5 (additive)
+['GET'] /api/v1/voice/audio/<audio_ref>                                         
+['GET'] /api/v1/voice/capabilities                                              
+['GET'] /api/v1/voice/consent                                                   
+['POST'] /api/v1/voice/consent                                                  
+['POST'] /api/v1/voice/consent/revoke                                           
+['POST'] /api/v1/voice/sessions                                                 
+['POST'] /api/v1/voice/sessions/<session_ref>/ask                               
+['DELETE'] /api/v1/voice/sessions/<session_ref>/audio                           
+['POST'] /api/v1/voice/sessions/<session_ref>/audio                             
+['POST'] /api/v1/voice/sessions/<session_ref>/confirm                           
+['GET'] /api/v1/voice/sessions/<session_ref>/transcription                      
+['POST'] /api/v1/voice/synthesise                                               
+['POST'] /ask-ai                                                                
+['GET'] /choose                                                                 
+['POST'] /choose-mode                                                           
+['GET', 'POST'] /dashboard                                                      
+['GET'] /healthz                                                                
+['POST'] /login                                                                 
+['GET', 'POST'] /logout                                                         
+['GET'] /static/<path:filename>                                                 

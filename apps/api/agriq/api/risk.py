@@ -18,6 +18,7 @@ from flask import Blueprint, jsonify, request
 
 from ..core.exceptions import NotFoundError, ValidationError
 from ..core.security import current_user, require_csrf
+from ..domain.risk_engine.base import PROBABILITY_INTERPRETATION
 from ..repositories.risk_repository import RiskAssessmentRepository
 from ..services import risk_service
 
@@ -152,6 +153,15 @@ def _row_to_dict(row) -> dict:
         "requires_expert_confirmation": bool(row.requires_expert_confirmation),
         "unavailable_reason": row.unavailable_reason,
         "rule_version": row.rule_version,
+        # Provenance: what produced the number and what it may be read as (§7, §17).
+        "assessment_method": row.assessment_method,
+        "probability_kind": row.probability_kind,
+        "calibration_status": row.calibration_status,
+        "probability_interpretation": PROBABILITY_INTERPRETATION.get(row.probability_kind),
+        # Evaluation dimensions snapshotted at assessment time (§13).
+        "crop": row.crop_name,
+        "growth_stage": row.growth_stage,
+        "district": row.district,
         "generated_at": row.generated_at.isoformat() if row.generated_at else None,
         "valid_until": row.valid_until.isoformat() if row.valid_until else None,
     }

@@ -4,9 +4,19 @@ One row per generated risk assessment. Assessments are append-only: a newer
 analysis supersedes (never overwrites) an older one via ``record_status`` +
 ``superseded_by_id`` so risk history is preserved verbatim.
 
-Probability (likelihood of the condition) and confidence (trust in the
-assessment quality) are stored separately and must never be conflated.
+Probability (likelihood the condition exists/occurs) and confidence (trust in
+the assessment quality) are stored separately and must never be conflated.
 Missing values stay NULL — never fabricated.
+
+Provenance columns make the origin of every number explicit (§7, §17):
+``assessment_method`` (rule_based | ml | hybrid), ``probability_kind``
+(rule_score | uncalibrated_ml_probability | calibrated_probability) and
+``calibration_status`` (not_validated | validated | not_applicable).
+
+Evaluation-dimension columns (``crop_name``, ``growth_stage``, ``district``)
+snapshot the context AT ASSESSMENT TIME so risk evaluation can report results
+per crop / stage / district (§13) without re-deriving context that has since
+changed.
 """
 from __future__ import annotations
 
@@ -64,6 +74,26 @@ class RiskAssessment(db.Model):
     rule_version = db.Column(db.String(60), nullable=False)
     requires_expert_confirmation = db.Column(db.Boolean, nullable=False, default=False)
     unavailable_reason = db.Column(db.String(80), nullable=True)
+
+    # --- Provenance of the produced numbers (§7, §17) ---------------------
+    # rule_based | ml | hybrid — never let a rule result look like a model result.
+    assessment_method = db.Column(
+        db.String(20), nullable=False, default="rule_based", server_default="rule_based"
+    )
+    # rule_score | uncalibrated_ml_probability | calibrated_probability | NULL.
+    # Deliberately NO column default: an unavailable assessment has no
+    # probability, and a column default would coerce the explicit NULL into
+    # "rule_score", mislabelling it.
+    probability_kind = db.Column(db.String(40), nullable=True)
+    # not_validated | validated | not_applicable.
+    calibration_status = db.Column(
+        db.String(20), nullable=False, default="not_validated", server_default="not_validated"
+    )
+
+    # --- Evaluation dimensions, snapshotted at assessment time (§13) ------
+    crop_name = db.Column(db.String(60), nullable=True, index=True)
+    growth_stage = db.Column(db.String(60), nullable=True)
+    district = db.Column(db.String(80), nullable=True, index=True)
 
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
     updated_at = db.Column(db.DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)

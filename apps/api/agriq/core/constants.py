@@ -43,6 +43,59 @@ PROVIDER_GEMINI = "Google Gemini"
 UNAVAILABLE_MESSAGE = "Verified data is currently unavailable."
 #: Unanalysed districts on the map display this until a real analysis runs.
 AWAITING_ANALYSIS_MESSAGE = "Awaiting verified analysis."
+#: Shown wherever a price/quantity would need market data we do not have.
+NO_VERIFIED_MARKET_MESSAGE = (
+    "No verified market figures are available. Live mandi prices come only from "
+    "the AGMARKNET provider; when it cannot be reached AGRIQ shows no number "
+    "rather than an estimate."
+)
+#: Shown wherever a rupee figure would need yield/cost data we do not have.
+NO_VERIFIED_IMPACT_MESSAGE = (
+    "Not estimated. A rupee impact needs a verified yield, cost and price basis, "
+    "none of which AGRIQ has for this crop yet."
+)
+# --- Canonical honest-state tokens (Phase 7 §3) ---------------------------
+# ONE vocabulary for "we do not have real data / a validated model for this".
+# Every module must emit these tokens instead of inventing its own wording, so
+# a unified consumer can branch on a single set of states. A token is a claim
+# about what AGRIQ does NOT know; it must never be replaced by a guess.
+TOKEN_DATA_UNAVAILABLE = "DATA_UNAVAILABLE"
+TOKEN_INSUFFICIENT_REAL_DATA = "INSUFFICIENT_REAL_DATA"
+TOKEN_MODEL_NOT_VALIDATED = "MODEL_NOT_VALIDATED"
+TOKEN_MODEL_NOT_REQUIRED = "MODEL_NOT_REQUIRED"
+TOKEN_MODEL_TRAINING_BLOCKED = "MODEL_TRAINING_BLOCKED"
+TOKEN_INSUFFICIENT_REAL_DATA_FOR_TRAINING = "INSUFFICIENT_REAL_DATA_FOR_TRAINING"
+TOKEN_CONFIDENCE_NOT_CALIBRATED = "CONFIDENCE_NOT_CALIBRATED"
+TOKEN_PROBABILITY_NOT_CALIBRATED = "PROBABILITY_NOT_CALIBRATED"
+TOKEN_RECOMMENDATION_BLOCKED = "RECOMMENDATION_BLOCKED_INSUFFICIENT_DATA"
+TOKEN_INSUFFICIENT_SAMPLE_SIZE = "INSUFFICIENT_SAMPLE_SIZE"
+TOKEN_DATASET_NOT_APPROVED = "DATASET_NOT_APPROVED"
+TOKEN_IMAGE_ANALYSIS_UNCERTAIN = "IMAGE_ANALYSIS_UNCERTAIN"
+TOKEN_VOICE_TRANSCRIPTION_FAILED = "VOICE_TRANSCRIPTION_FAILED"
+TOKEN_WEATHER_DATA_UNAVAILABLE = "WEATHER_DATA_UNAVAILABLE"
+TOKEN_CROP_STAGE_UNKNOWN = "CROP_STAGE_UNKNOWN"
+TOKEN_ROUTE_DATA_UNAVAILABLE = "ROUTE_DATA_UNAVAILABLE"
+TOKEN_NET_VALUE_INCOMPLETE = "NET_VALUE_INCOMPLETE"
+TOKEN_CACHED = "CACHED"
+TOKEN_HEURISTIC_NOT_VALIDATED = "HEURISTIC_NOT_VALIDATED"
+TOKEN_YIELD_IMPACT_NOT_MEASURED = "YIELD_IMPACT_NOT_MEASURED"
+
+#: Human-readable basis strings for the rule-based (non-ML, non-calibrated)
+#: parts of the Phase 3 dashboard intelligence. These exist so the UI can show
+#: WHAT a number is, instead of presenting a heuristic as a measurement.
+BASIS_RULE_HEURISTIC = (
+    "Rule-based heuristic over farmer-entered crop, stage and field values plus "
+    "verified weather. Not a validated model and not a field measurement."
+)
+BASIS_UNCALIBRATED_SCREENING = (
+    "Rule-based screening band computed from the inputs above. Not a calibrated "
+    "probability, so it must not be read as one."
+)
+BASIS_IMAGE_COLOUR_HEURISTIC = (
+    "Colour-pattern screening over the uploaded image (green/yellow/brown/dark "
+    "pixel proportions). Not a trained crop-disease model and not a diagnosis."
+)
+
 #: Upload size/type rules.
 MAX_SOIL_REPORT_BYTES = 5 * 1024 * 1024  # 5 MiB
 ALLOWED_SOIL_REPORT_MIMES = {"application/pdf", "image/jpeg", "image/png"}

@@ -26,6 +26,7 @@ INTENT_HARVEST = "harvest_readiness"
 INTENT_POST_HARVEST = "post_harvest"
 INTENT_SOIL = "soil_information"
 INTENT_MARKET = "market_price"
+INTENT_CROP_CHOICE = "crop_choice"
 INTENT_PREVIOUS_REC = "previous_recommendation"
 INTENT_RECORD_OBSERVATION = "record_observation"
 INTENT_EXPERT_HELP = "expert_help"
@@ -35,8 +36,8 @@ ALL_INTENTS = {
     INTENT_FARM_ACTION, INTENT_IRRIGATION, INTENT_WEATHER, INTENT_SOWING,
     INTENT_TRANSPLANTING, INTENT_STAGE_CARE, INTENT_NUTRIENT, INTENT_PEST,
     INTENT_DISEASE, INTENT_WEED, INTENT_HARVEST, INTENT_POST_HARVEST,
-    INTENT_SOIL, INTENT_MARKET, INTENT_PREVIOUS_REC, INTENT_RECORD_OBSERVATION,
-    INTENT_EXPERT_HELP, INTENT_GENERAL,
+    INTENT_SOIL, INTENT_MARKET, INTENT_CROP_CHOICE, INTENT_PREVIOUS_REC,
+    INTENT_RECORD_OBSERVATION, INTENT_EXPERT_HELP, INTENT_GENERAL,
 }
 
 # One short clarifying question per ambiguous pair / low confidence
@@ -132,9 +133,22 @@ _INTENT_KEYWORDS: dict[str, tuple[tuple[str, ...], tuple[str, ...], float]] = {
         ("ମାଟି", "ମାଟି ପରୀକ୍ଷା"),
     ),
     INTENT_MARKET: (
-        ("market", "price", "mandi", "rate", "sell price", "modal price"),
-        ("मंडी", "भाव", "दाम", "मूल्य", "mandi", "bhav", "daam", "rate"),
-        ("ମଣ୍ଡି", "ଦର", "ମୂଲ୍ୟ", "ବଜାର"),
+        ("market", "price", "mandi", "rate", "sell price", "modal price",
+         # Phase 6 timing / routing vocabulary
+         "sell now", "sell or wait", "should i sell", "where should i sell",
+         "which mandi", "best price", "expected price", "price next week",
+         "price forecast", "transport cost", "transport", "distance to market",
+         "net value", "gross value"),
+        ("मंडी", "भाव", "दाम", "मूल्य", "mandi", "bhav", "daam", "rate",
+         "कहाँ बेच", "अगले हफ्ते भाव"),
+        ("ମଣ୍ଡି", "ଦର", "ମୂଲ୍ୟ", "ବଜାର", "କେଉଁ ମଣ୍ଡି", "ବିକ୍ରି"),
+    ),
+    INTENT_CROP_CHOICE: (
+        ("which crop", "what should i grow", "what to grow", "crop to grow",
+         "grow this season", "which crop to plant", "crop choice",
+         "crop recommendation", "best crop", "next crop", "plant instead"),
+        ("कौन सी फसल", "कौनसी फसल", "क्या लगाएं", "क्या बोएं", "kaunsi fasal", "kya lagaye"),
+        ("କେଉଁ ଫସଲ", "କଣ ଲଗାଇବି", "କେଉଁ ଫସଲ ଲଗାଇବି"),
     ),
     INTENT_PREVIOUS_REC: (
         ("previous recommendation", "last advice", "earlier suggestion", "my recommendation"),
@@ -215,6 +229,8 @@ def _default_tools(intent: str) -> list[str]:
         tools.append("weather")
     if intent == INTENT_MARKET:
         tools.append("market")
+    # Crop choice reads stored official price history but never triggers one
+    # provider call per candidate crop, so it needs no "market" tool.
     return tools
 
 
@@ -223,6 +239,6 @@ __all__ = [
     "INTENT_FARM_ACTION", "INTENT_IRRIGATION", "INTENT_WEATHER", "INTENT_SOWING",
     "INTENT_TRANSPLANTING", "INTENT_STAGE_CARE", "INTENT_NUTRIENT", "INTENT_PEST",
     "INTENT_DISEASE", "INTENT_WEED", "INTENT_HARVEST", "INTENT_POST_HARVEST",
-    "INTENT_SOIL", "INTENT_MARKET", "INTENT_PREVIOUS_REC", "INTENT_RECORD_OBSERVATION",
-    "INTENT_EXPERT_HELP", "INTENT_GENERAL",
+    "INTENT_SOIL", "INTENT_MARKET", "INTENT_CROP_CHOICE", "INTENT_PREVIOUS_REC",
+    "INTENT_RECORD_OBSERVATION", "INTENT_EXPERT_HELP", "INTENT_GENERAL",
 ]

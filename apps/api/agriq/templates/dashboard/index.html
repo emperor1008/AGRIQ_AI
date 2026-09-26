@@ -24,13 +24,15 @@
                 <div class="summary-card">
                     <span>Crop Health</span>
                     <strong>{% if analysis %}{{ analysis.health }}%{% else %}--{% endif %}</strong>
-                    <small>Risk + symptom evidence</small>
+                    {# Phase 7 §3: a rule heuristic, never shown as a measurement. #}
+                    <small>Rule estimate — not measured</small>
                 </div>
 
                 <div class="summary-card">
                     <span>Yield Protection</span>
                     <strong>{% if analysis %}{{ analysis.productivity }}%{% else %}--{% endif %}</strong>
-                    <small>Productivity condition</small>
+                    {# Phase 7 §3: a rule heuristic, never shown as a yield forecast. #}
+                    <small>Rule estimate — not a yield forecast</small>
                 </div>
 
                 <div class="summary-card urgency-card">
@@ -73,7 +75,7 @@
                     <p>Keep input simple. The engine adjusts risk using crop, district, growth stage, field condition and optional leaf image.</p>
                 </div>
 
-                <form method="POST" enctype="multipart/form-data" id="farmForm">
+                <form method="POST" enctype="multipart/form-data" id="analysisForm">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
                     <label>Crop / Vegetable / Fruit</label>
                     <input list="cropList" name="crop" id="cropInput" placeholder="Example: Rice, Tomato, Mango" value="{{ selected_crop or '' }}" required>
@@ -109,7 +111,6 @@
 
                     <div class="button-grid">
                         <button type="submit">Analyze Now</button>
-                        <button type="button" class="ghost-btn" onclick="runDemoCase()">Run Demo Case</button>
                     </div>
                 </form>
             </aside>
@@ -342,6 +343,7 @@
         {% if user_mode == 'farmer' %}
         {% include "dashboard/_farm_data.html" %}
         {% include "dashboard/_risk.html" %}
+        {% include "dashboard/_market.html" %}
         {% endif %}
 
         {{ assistant_panel(user_mode) }}

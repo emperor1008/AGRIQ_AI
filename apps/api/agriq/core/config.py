@@ -86,6 +86,11 @@ class BaseConfig:
         "DATA_GOV_IN_MARKET_RESOURCE_ID", "9ef84268-d588-465a-a308-a864a43d0070"
     ).strip()
 
+    # Phase 5 crop risk intelligence. The TTL is the idempotency window for a
+    # stored analysis run: re-analysing a field inside it returns the stored
+    # result instead of recomputing (and never re-alerts on identical results).
+    RISK_ASSESSMENT_TTL_MINUTES = max(1, int(os.environ.get("RISK_ASSESSMENT_TTL_MINUTES", "30")))
+
     # Phase 4 crop-image intelligence. The feature is available only when a
     # registry-approved model exists; otherwise it reports an honest
     # unavailable state. Images are stored privately (never public URLs).

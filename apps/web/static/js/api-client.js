@@ -240,6 +240,69 @@
     return data;
   }
 
+  // --- Phase 6: Farm-to-Market endpoints -----------------------------------
+
+  function marketQuery(params) {
+    var query = new URLSearchParams();
+    Object.keys(params || {}).forEach(function (key) {
+      var value = params[key];
+      if (value !== null && value !== undefined && value !== "") query.append(key, value);
+    });
+    return query.toString();
+  }
+
+  /** Phase 6: official prices, trend, volatility and market comparison. */
+  async function marketOverview(params) {
+    var response = await fetch("/api/v1/market/overview?" + marketQuery(params));
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.message || data.error || "Market data unavailable");
+    return data;
+  }
+
+  /** Phase 6: provenance, freshness and quality report. */
+  async function marketEvidence(params) {
+    var response = await fetch("/api/v1/market/evidence?" + marketQuery(params));
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.message || data.error || "Market evidence unavailable");
+    return data;
+  }
+
+  /** Phase 6: sell/hold decision support (CSRF-protected). */
+  async function marketSellHold(payload) {
+    var response = await fetch("/api/v1/market/sell-hold", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
+      body: JSON.stringify(payload || {}),
+    });
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.message || data.error || "Timing advice unavailable");
+    return data;
+  }
+
+  /** Phase 6: crop-choice options (CSRF-protected). */
+  async function marketCropOptions(payload) {
+    var response = await fetch("/api/v1/market/crop-options", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
+      body: JSON.stringify(payload || {}),
+    });
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.message || data.error || "Crop options unavailable");
+    return data;
+  }
+
+  /** Phase 6: market comparison with cost completeness (CSRF-protected). */
+  async function marketLogistics(payload) {
+    var response = await fetch("/api/v1/market/logistics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
+      body: JSON.stringify(payload || {}),
+    });
+    var data = await response.json();
+    if (!response.ok) throw new Error(data.message || data.error || "Market comparison unavailable");
+    return data;
+  }
+
   global.AgriqAPI = {
     askAI: askAI,
     fetchLiveWeather: fetchLiveWeather,
@@ -262,6 +325,11 @@
     analyzeFieldRisk: analyzeFieldRisk,
     currentFieldRisk: currentFieldRisk,
     riskAction: riskAction,
+    marketOverview: marketOverview,
+    marketEvidence: marketEvidence,
+    marketSellHold: marketSellHold,
+    marketCropOptions: marketCropOptions,
+    marketLogistics: marketLogistics,
     csrfToken: csrfToken,
   };
 })(window);

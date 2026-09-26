@@ -8,7 +8,7 @@ Rules enforced here:
 """
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from ..core.logging import get_logger
 from ..repositories.copilot_repository import FeedbackRepository, RecommendationRepository

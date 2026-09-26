@@ -127,7 +127,7 @@ Request → Blueprint (HTTP only) → Service (orchestration)
 | `backend/app.py` — `deterministic_weather`, `fetch_weather`, forecast | `apps/api/agriq/integrations/weather/open_meteo.py` |
 | `backend/app.py` — weather console builder | `apps/api/agriq/services/weather_advisory.py` |
 | `backend/app.py` — `analyze_leaf_image` (Pillow) | `apps/api/agriq/services/leaf_analysis.py` |
-| `backend/app.py` — `analyze_farm`, map data, market/profit bands | `apps/api/agriq/services/farm_intelligence.py` |
+| `backend/app.py` — `analyze_farm`, map data, impact cards | `apps/api/agriq/services/farm_intelligence.py` |
 | `backend/app.py` — student result builders + dropdown sections | `apps/api/agriq/services/student_intelligence.py` |
 | `backend/app.py` — `generate_farmer_ai_answer`, `generate_student_ai_answer` | `apps/api/agriq/services/assistant_orchestrator.py` |
 | `backend/services/llm.py` (Gemini) | `apps/api/agriq/integrations/ai/gemini.py` |
@@ -149,13 +149,17 @@ Request → Blueprint (HTTP only) → Service (orchestration)
 | Weather + 7-day forecast | Open-Meteo | No | Labelled `OFFLINE FALLBACK` (never shown as live) |
 | Map tiles | OpenStreetMap/Leaflet | No | Tiles simply don't render |
 | Generative AI | Gemini REST API | Optional | Built-in knowledge engine, labelled `knowledge_engine` |
-| Leaf image analysis | Pillow colour heuristic | No | Honest "not analysed" state |
+| Leaf image analysis | Pillow colour heuristic | No | Honest "not analysed" state; `IMAGE_ANALYSIS_UNCERTAIN` when leaf area is too low to screen |
 | Mandi prices | AGMARKNET via data.gov.in | Yes | Explicit unavailable state — **no prices generated** |
+| Dashboard risk / health / impact indicators | AGRIQ rule heuristics (no external source) | No | Always labelled ("rule estimate — not measured", "indicative bands — not measured"); never presented as measurements |
 
 AGRIQ never fabricates live weather, market prices, district-risk "ML"
 values, Gemini answers or disease diagnoses. LeafScan is a transparent
-colour-pattern **screening** aid, not a trained model. See
-`docs/DATA_PROVENANCE.md`.
+colour-pattern **screening** aid, not a trained model. The dashboard's
+rule-based indicators are documented formula-by-formula in
+`docs/dashboard-heuristics.md`, and the curated ₹ price bands were removed
+outright in Phase 7 — rupee values come only from the AGMARKNET provider.
+See `docs/DATA_PROVENANCE.md`.
 
 ## Run locally
 

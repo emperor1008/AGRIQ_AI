@@ -59,7 +59,6 @@ def generate_student_ai_answer(question: str, context: Mapping[str, Any] | None 
     soil_type, soil = library_lookup(SOIL_LIBRARY, context.get("soil_type"), "Alluvial soil")
     animal_species, animal = library_lookup(ANIMAL_LIBRARY, context.get("animal_species"), "Dairy cattle")
     academic_level = context.get("academic_level", "B.Sc Agriculture Semester 3-4")
-    purpose = context.get("study_purpose", "Exam Preparation")
     district = context.get("district", "Cuttack")
 
     bank = build_question_bank(area, topic, crop, pest_name, disease_name, academic_level)

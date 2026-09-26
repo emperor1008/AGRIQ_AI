@@ -23,8 +23,6 @@ user — browser-supplied ids are never trusted.
 """
 from __future__ import annotations
 
-from datetime import date, datetime
-
 from flask import Blueprint, jsonify, request
 
 from ..core.audit import audit_event

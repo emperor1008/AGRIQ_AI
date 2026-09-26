@@ -14,7 +14,13 @@ if str(API_DIR) not in sys.path:
     sys.path.insert(0, str(API_DIR))
 
 from agriq.domain.risk_engine import analyzers, thresholds, weather_input  # noqa: E402
-from agriq.domain.risk_engine.base import RISK_TYPES  # noqa: E402
+from agriq.domain.risk_engine.base import (  # noqa: E402
+    ASSESSMENT_METHODS,
+    CALIBRATION_STATUSES,
+    PROBABILITY_INTERPRETATION,
+    PROBABILITY_KINDS,
+    RISK_TYPES,
+)
 from agriq.domain.risk_engine.freshness import classify, confidence_factor  # noqa: E402
 
 NOW = datetime.now(timezone.utc)
@@ -276,3 +282,49 @@ def test_threshold_registry_is_documented():
     assert thresholds.RULES_VERSION == "agriq-risk-rules-v1"
     assert thresholds.DISEASE_WEATHER["humidity_high"] == 80.0
     assert thresholds.HEAVY_RAIN["heavy_mm_per_day"] == 64.5  # WMO/IMD convention
+
+
+# ---------------------------------------------------------------------------
+# Assessment-method provenance (§7, §17): a rule result must never look like ML
+# ---------------------------------------------------------------------------
+
+def test_every_assessment_declares_its_method_and_probability_kind():
+    humid = _weather(humidity=88.0, temp=26.0, rain=12.0, hourly=[{"humidity": 85.0}] * 8)
+    results = [
+        analyzers.disease_conducive_weather("rice", "Tillering", humid),
+        analyzers.heavy_rain_flooding("rice", "Tillering", _weather(daily=[{"rain": 90.0}])),
+        analyzers.heat_stress("rice", "Tillering", _weather(temp=39.0, daily=[{"rain": 0.0, "temp_max": 39.0}])),
+        analyzers.water_stress("rice", "Tillering", _dry_week()),
+        analyzers.market_volatility("Rice", _market_records([100, 130, 90, 125])),
+    ]
+    for result in results:
+        assert result.assessment_method in ASSESSMENT_METHODS
+        assert result.assessment_method == "rule_based"
+        assert result.calibration_status in CALIBRATION_STATUSES
+        if result.probability is not None:
+            # A rule engine must never claim a calibrated probability (§5).
+            assert result.probability_kind == "rule_score"
+            assert result.calibration_status == "not_validated"
+        else:
+            assert result.probability_kind is None
+            assert result.calibration_status == "not_applicable"
+        payload = result.to_dict()
+        assert payload["assessment_method"] == "rule_based"
+        assert payload["probability_interpretation"] == (
+            PROBABILITY_INTERPRETATION.get(result.probability_kind) if result.probability_kind else None
+        )
+
+
+def test_unavailable_assessments_claim_no_probability_kind():
+    result = analyzers.disease_conducive_weather("wheat", "Tillering", _weather())
+    assert result.probability is None
+    assert result.probability_kind is None
+    assert result.calibration_status == "not_applicable"
+    assert result.to_dict()["probability_interpretation"] is None
+
+
+def test_probability_interpretation_wording_exists_for_every_kind():
+    for kind in PROBABILITY_KINDS:
+        assert PROBABILITY_INTERPRETATION[kind].strip()
+    # The rule-score wording must state what the number is NOT.
+    assert "not a calibrated probability" in PROBABILITY_INTERPRETATION["rule_score"]

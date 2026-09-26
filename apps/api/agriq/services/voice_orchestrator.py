@@ -20,7 +20,7 @@ lives here. Key honesty rules:
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Any
 
 from ..core.config import BaseConfig
 from ..core.exceptions import ValidationError
@@ -338,8 +338,6 @@ def ask_copilot(user_ref: str | int, user_id: int, config: BaseConfig) -> dict[s
 def synthesise_message(user_id: int, message_ref: str, language_code: str,
                        config: BaseConfig) -> dict[str, Any]:
     """TTS for an owned copilot answer message. Only farmer-facing text."""
-    from ..repositories.copilot_repository import ConversationRepository
-
     message = _owned_message(message_ref, user_id)
     if message is None or message.role != "assistant":
         raise ValidationError("Only assistant answers can be read aloud.")

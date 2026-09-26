@@ -64,3 +64,25 @@ def test_safe_analyze_degrades_to_honest_state():
     result = leaf_analysis.safe_analyze(_Upload("bad.png", b"junk"))
     assert result["available"] is False
     assert "JPG, PNG or WebP" in result["explanation"]
+    # Phase 7 F-04: an unanalysed image is an explicit unavailable state.
+    assert result["confidence_status"] == "DATA_UNAVAILABLE"
+
+
+def test_screening_confidence_is_labelled_uncalibrated():
+    """Phase 7 F-04: the number is a colour-heuristic band, not a model score."""
+    result = leaf_analysis.analyze_leaf_image(_Upload("leaf.png", _png_bytes()))
+
+    assert result["confidence_status"] == "PROBABILITY_NOT_CALIBRATED"
+    assert result["confidence_basis"]
+    assert "colour-pattern" in result["confidence_basis"].lower()
+    assert result["uncertain"] is False
+
+
+def test_unclear_image_is_marked_uncertain():
+    """Phase 7 §15: too little leaf area must not be forced into a symptom band."""
+    grey = _png_bytes(color=(128, 128, 128))
+    result = leaf_analysis.analyze_leaf_image(_Upload("grey.png", grey))
+
+    assert result["symptom"] == "Unclear leaf area"
+    assert result["confidence_status"] == "IMAGE_ANALYSIS_UNCERTAIN"
+    assert result["uncertain"] is True

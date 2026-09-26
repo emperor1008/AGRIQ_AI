@@ -55,6 +55,23 @@ Soil values are individually nullable: `"ph": null` means *unknown*, never
 a generated estimate. Uploaded reports are stored privately under
 `uploads/soil_reports/<user_id>/` and are not web-servable.
 
+### Farm-to-Market API (Phase 6)
+
+Additive to `GET /api/market-prices`. Session-authenticated; POST routes require
+`X-CSRF-Token`; a foreign `field_id`/`crop_cycle_id` returns 404; all five
+analysis routes share the analysis rate limit. Full reference:
+`docs/market-api.md`.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/v1/market/overview` | Stored official prices, trend, volatility, demand state, per-variety market comparison. Optional `field_id`, `crop_cycle_id`, `commodity`, `quantity_quintals`, `transport_rate_per_km_quintal`, `transport_cost_total`. Blank cost fields stay unknown; an explicit `0` is a known cost. |
+| GET | `/api/v1/market/forecast` | Chronological forecast over stored official history, or an explicit `insufficient_data` refusal. `horizon_days` 7 or 14. |
+| GET | `/api/v1/market/demand` | Demand capability state — unavailable by design (`arrivals_not_published_by_configured_source`), never a proxy figure. |
+| GET | `/api/v1/market/evidence` | Provenance, freshness policy and data-quality/quarantine report. No key material. |
+| POST | `/api/v1/market/crop-options` | Crop-choice intelligence for the district (`crops` list ≤ 12, optional `season`, `include_market`). |
+| POST | `/api/v1/market/sell-hold` | Evidence-based timing decision (`SELL_NOW`/`WAIT`/`MONITOR`/`INSUFFICIENT_DATA`) with `missing_information`. |
+| POST | `/api/v1/market/logistics` | Market comparison with distance proxy, farmer-supplied costs (`quantity_quintals`, `transport_rate_per_km_quintal`, `transport_cost_total`, `input_cost_total`, `market_fee_total`) and `NET_VALUE_INCOMPLETE` economics. |
+
 ### Weather availability contract
 
 `/api/live-weather` and the weather section of `/api/farmer-context`
@@ -146,6 +163,7 @@ Errors: empty question → guidance message; invalid CSRF → 403; rate limit
 | POST `/login`, POST `/choose-mode` | 8/minute |
 | POST `/ask-ai` | 12/minute |
 | POST `/dashboard` | 20/minute |
+| `/api/v1/market/*` (Phase 6 analysis routes) | `AGRIQ_RATE_ANALYSIS` (default 20/minute) |
 | GET `/api/live-weather` | 30/minute |
 
 ## Upload rules

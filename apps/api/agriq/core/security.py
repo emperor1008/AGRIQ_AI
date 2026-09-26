@@ -8,7 +8,6 @@ Implements the requirements of ``03_SECURITY_AND_ACCESS.md``:
 """
 from __future__ import annotations
 
-import hashlib
 import hmac
 import secrets
 from functools import wraps
