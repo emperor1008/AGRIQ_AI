@@ -30,7 +30,7 @@ from flask import Blueprint, jsonify, request
 
 from ..core.exceptions import NotFoundError, ValidationError
 from ..core.logging import get_logger
-from ..core.security import current_user, require_csrf
+from ..core.security import get_current_user, require_csrf
 from ..domain.market import forecasting
 from ..services import market_intelligence
 
@@ -45,10 +45,8 @@ MAX_CROP_OPTIONS = 12
 
 
 def _require_active_user():
-    user = current_user()
-    if user is None or not user.is_active:
-        raise NotFoundError("Sign in to continue.")
-    return user
+    """Centralised authentication dependency (Phase 7.1); 401 when not signed in."""
+    return get_current_user()
 
 
 def _optional_number(payload, key: str, ceiling: float, *, allow_zero: bool = False) -> float | None:

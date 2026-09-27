@@ -8,12 +8,41 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from ..core.constants import (
+    STATE_CONFIGURATION_ERROR,
+    STATE_DATA_SOURCE_ERROR,
+    STATE_DATA_STALE,
+    STATE_INVALID_LOCATION,
+    STATE_OK,
+    UNAVAILABLE_MESSAGE,
+)
 from ..domain.risk.scoring import (
     clamp,
     component_scores,
     risk_color,
     risk_status,
 )
+
+#: State-specific source note for the unavailable console: it names the actual
+#: cause instead of blaming the provider for every outcome.
+_UNAVAILABLE_SOURCE_NOTES = {
+    STATE_DATA_SOURCE_ERROR: (
+        "Weather comes live from Open-Meteo. The provider could not be reached just "
+        "now, so no weather values are shown - nothing is estimated."
+    ),
+    STATE_INVALID_LOCATION: (
+        "Weather comes live from Open-Meteo for a real location. No usable location is "
+        "stored for this field yet, and AGRIQ does not guess one."
+    ),
+    STATE_DATA_STALE: (
+        "Weather comes live from Open-Meteo. The last verified update is shown and "
+        "marked stale; nothing is extrapolated from it."
+    ),
+    STATE_CONFIGURATION_ERROR: (
+        "Weather comes live from Open-Meteo. This deployment cannot reach it with the "
+        "current configuration, so no values are shown rather than estimated ones."
+    ),
+}
 
 
 def build_weather_console(
@@ -23,16 +52,26 @@ def build_weather_console(
     forecast: list[Mapping[str, Any]],
 ) -> dict[str, Any]:
     """Weather console payload rendered by the dashboard."""
-    if not weather.get("available"):
+    # A provider that answered without a single usable value is reported as the
+    # unavailable state too: rendering "None°C" would present the absence of data
+    # as a value.
+    has_values = any(
+        weather.get(key) is not None for key in ("temp", "humidity", "rain", "wind")
+    )
+    if not weather.get("available") or not has_values:
+        state = weather.get("state") or STATE_DATA_SOURCE_ERROR
         return {
             "district": district,
             "available": False,
             "live_badge": "UNAVAILABLE",
-            "message": weather.get("message", "Verified data is currently unavailable."),
+            "message": weather.get("message", UNAVAILABLE_MESSAGE),
+            "state": state,
+            "state_message": weather.get("state_message") or UNAVAILABLE_MESSAGE,
             "reason": weather.get("reason"),
-            "source_note": (
-                "Weather comes live from Open-Meteo. The provider could not be reached, "
-                "so no weather values are shown right now — nothing is estimated."
+            "source_note": _UNAVAILABLE_SOURCE_NOTES.get(
+                state,
+                "Weather comes live from Open-Meteo. No weather values are shown right "
+                "now - nothing is estimated.",
             ),
             "current": {"temp": None, "humidity": None, "rain": None, "wind": None,
                         "condition": None, "time": None},
@@ -72,14 +111,28 @@ def build_weather_console(
         "crop stage, field moisture and local KVK/agriculture department recommendation."
     )
 
+    stale = bool(weather.get("stale")) or weather.get("state") == STATE_DATA_STALE
+    location_note = (
+        " Values are for the district administrative centre, not exact field coordinates."
+        if weather.get("location_source") == "district_centre"
+        else " Values are for the registered field coordinates."
+    )
     return {
         "district": district,
         "available": True,
-        "live_badge": "LIVE SYNC",
+        "live_badge": "STALE" if stale else "LIVE SYNC",
+        "state": weather.get("state") or STATE_OK,
+        "state_message": weather.get("state_message"),
+        "stale": stale,
+        "location_source": weather.get("location_source"),
+        "freshness": weather.get("freshness"),
         "updated_at": weather.get("retrieved_at"),
         "provider_observed_at": weather.get("provider_observed_at"),
         "message": None,
-        "source_note": "Live values are synced from Open-Meteo for the registered field coordinates. Forecast rows are provider forecasts, not on-field sensor readings.",
+        "source_note": (
+            "Live values are synced from Open-Meteo." + location_note + " Forecast rows are "
+            "provider forecasts, not on-field sensor readings."
+        ),
         "soil_water_note": soil_water_note,
         "current": {
             "temp": weather.get("temp"),

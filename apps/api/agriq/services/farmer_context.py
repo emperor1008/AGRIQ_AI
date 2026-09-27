@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..core.constants import STATE_DATA_UNAVAILABLE
 from ..core.logging import get_logger
 from ..core.time import iso_utc
 from ..repositories.farmer_repository import (
@@ -28,6 +29,7 @@ from ..repositories.farmer_repository import (
     SoilTestRepository,
 )
 from . import crop_stage_service
+from . import market_service
 from . import weather_service
 
 logger = get_logger("services.farmer_context")
@@ -57,6 +59,25 @@ def build_farmer_context(
     if profile is None:
         context["farmer"] = None
         context["onboarding_required"] = True
+        context["farm"] = None
+        context["field"] = None
+        context["crop_cycle"] = None
+        context["recent_observations"] = []
+        # Phase 7.3: a farmer who has not onboarded still gets REAL states.
+        # There is no location yet, which is an explicit invalid-location state
+        # ("add your district or field coordinates") - not the generic
+        # "verified data is currently unavailable" that implies an outage.
+        if include_weather:
+            context["weather"] = weather_service.get_district_weather(None)
+        else:
+            context["weather"] = {
+                "available": False,
+                "state": STATE_DATA_UNAVAILABLE,
+                "reason": "not_requested",
+                "message": "Weather was not requested for this context.",
+                "state_message": "Weather was not requested for this context.",
+            }
+        context["market"] = market_service.context_state()
         return context
 
     context["onboarding_required"] = False
@@ -120,22 +141,32 @@ def build_farmer_context(
     else:
         context["recent_observations"] = []
 
-    # --- Weather (live, with provenance) --------------------------------------
-    if include_weather and field is not None:
-        context["weather"] = weather_service.get_field_weather(field.id, profile.id)
+    # --- Weather (live, with provenance and an explicit state) ----------------
+    if include_weather:
+        if field is not None:
+            context["weather"] = weather_service.get_field_weather(field.id, profile.id)
+        else:
+            # No field yet: the profile district is still a real location, so the
+            # provider is queried for the district's administrative centre and the
+            # result says so. No location at all is an explicit invalid-location
+            # state, never a value.
+            context["weather"] = weather_service.get_district_weather(
+                profile.district or None
+            )
     else:
         context["weather"] = {
             "available": False,
-            "reason": "no_field_selected",
-            "message": "Register a field with coordinates to receive weather.",
+            "state": STATE_DATA_UNAVAILABLE,
+            "reason": "not_requested",
+            "message": "Weather was not requested for this context.",
+            "state_message": "Weather was not requested for this context.",
         }
 
-    # --- Market placeholder (explicit unavailable until requested) ------------
-    context["market"] = {
-        "available": False,
-        "reason": "not_requested",
-        "message": "Official matching records unavailable.",
-    }
+    # --- Market (the real state of official price data; never a placeholder) --
+    context["market"] = market_service.context_state(
+        district=profile.district or (farm.district if farm is not None else None),
+        state=profile.state or (farm.state if farm is not None else None),
+    )
     return context
 
 

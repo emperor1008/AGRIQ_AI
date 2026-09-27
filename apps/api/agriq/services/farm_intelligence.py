@@ -209,10 +209,12 @@ def build_farmer_dropdown_sections(analysis: Mapping[str, Any]) -> list[dict[str
     treatment = analysis["treatment"]
     leafscan = analysis["leafscan"]
     weather = analysis["weather"]
+    # The unavailable line states the REAL cause (location missing, provider
+    # outage, stale cache) instead of a single generic sentence.
     weather_line = (
         f"{weather.get('temp')}°C • {weather.get('humidity')}% humidity • {weather.get('rain')} mm rain"
         if weather.get("temp") is not None
-        else "Verified data is currently unavailable."
+        else (weather.get("state_message") or "Verified data is currently unavailable.")
     )
     forecast = analysis.get("forecast", [])
     return [

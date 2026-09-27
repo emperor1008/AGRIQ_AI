@@ -17,7 +17,7 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 
 from ..core.exceptions import NotFoundError, ValidationError
-from ..core.security import current_user, require_csrf
+from ..core.security import get_current_user, require_csrf
 from ..domain.risk_engine.base import PROBABILITY_INTERPRETATION
 from ..repositories.risk_repository import RiskAssessmentRepository
 from ..services import risk_service
@@ -28,10 +28,8 @@ _ACTION_STATUSES = {"planned", "completed", "skipped", "needs_help"}
 
 
 def _require_active_user():
-    user = current_user()
-    if user is None or not user.is_active:
-        raise NotFoundError("Sign in to continue.")
-    return user
+    """Centralised authentication dependency (Phase 7.1); 401 when not signed in."""
+    return get_current_user()
 
 
 # ---------------------------------------------------------------------------

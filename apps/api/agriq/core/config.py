@@ -9,12 +9,37 @@ def _bool(value: str | None) -> bool:
     return str(value).strip().lower() in {"1", "true", "yes", "on"}
 
 
+#: Development convenience key. Production refuses to boot with it (§28).
+DEV_SECRET_KEY_FALLBACK = "AGRIQ_ai_v3_private_key"
+#: Values nobody may use as a production secret, even though they look chosen.
+_FORBIDDEN_SECRETS = {
+    "secret", "test", "development", "dev", "password", "changeme", "123456",
+    "agriq", "agriqai", DEV_SECRET_KEY_FALLBACK,
+}
+
+
+def secret_key_problem(secret: str | None) -> str | None:
+    """Return why a secret is unusable, or None when it is acceptable."""
+    value = str(secret or "").strip()
+    if not value:
+        return "AGRIQ_SECRET_KEY is not set."
+    if len(value) < 32:
+        return "AGRIQ_SECRET_KEY must be at least 32 characters long."
+    if value.lower() in _FORBIDDEN_SECRETS:
+        return "AGRIQ_SECRET_KEY is a known placeholder value."
+    return None
+
+
 class BaseConfig:
     """Base configuration shared by all environments."""
 
     def get(self, key: str, default=None):
         """Dict-like access so services can read config without Flask."""
         return getattr(self, key, default)
+
+    #: TestingConfig keeps its deterministic values instead of re-reading the
+    #: process environment (a CI runner may export AGRIQ_SECRET_KEY etc.).
+    REFRESH_FROM_ENVIRONMENT = True
 
     def __init__(self) -> None:
         # Re-read environment-dependent values at instantiation so process
@@ -25,18 +50,89 @@ class BaseConfig:
         self.RATELIMIT_STORAGE_URI = os.environ.get(
             "RATELIMIT_STORAGE_URI", self.RATELIMIT_STORAGE_URI
         )
+        if self.REFRESH_FROM_ENVIRONMENT:
+            self._refresh_from_environment()
+
+    def _refresh_from_environment(self) -> None:
+        """Re-read environment-driven settings at instantiation time.
+
+        Class attributes are evaluated when the module is first imported, which
+        is *before* an entrypoint can load an optional ``.env`` file. Phase 7.1
+        moved every secret- and session-bearing setting here so the value that is
+        actually used is the value that is actually configured — the class-level
+        defaults remain only as documentation of the fallback.
+        """
+        self.SECRET_KEY = os.environ.get("AGRIQ_SECRET_KEY", self.SECRET_KEY)
+        self.SESSION_COOKIE_SECURE = _bool(os.environ.get("AGRIQ_COOKIE_SECURE", "0"))
+        self.AGRIQ_ENABLE_HSTS = _bool(os.environ.get("AGRIQ_ENABLE_HSTS", "0"))
+        self.AGRIQ_ENABLE_CSRF = _bool(os.environ.get("AGRIQ_ENABLE_CSRF", "1"))
+        self.AGRIQ_SESSION_IDLE_TIMEOUT_HOURS = max(
+            1, int(os.environ.get("AGRIQ_SESSION_IDLE_TIMEOUT_HOURS", "8"))
+        )
+        self.AGRIQ_SESSION_ABSOLUTE_TIMEOUT_HOURS = max(
+            1, int(os.environ.get("AGRIQ_SESSION_ABSOLUTE_TIMEOUT_HOURS", str(24 * 30)))
+        )
+        self.AGRIQ_ALLOWED_ORIGINS = [
+            origin.strip()
+            for origin in os.environ.get("AGRIQ_ALLOWED_ORIGINS", "").split(",")
+            if origin.strip()
+        ]
+        self.AGRIQ_RATE_RECOVERY = os.environ.get("AGRIQ_RATE_RECOVERY", "5 per minute")
+        self.AGRIQ_PASSWORD_RESET_TTL_MINUTES = max(
+            5, int(os.environ.get("AGRIQ_PASSWORD_RESET_TTL_MINUTES", "30"))
+        )
+        self.AGRIQ_EMAIL_PROVIDER = os.environ.get("AGRIQ_EMAIL_PROVIDER", "").strip()
+        self.AGRIQ_SMTP_HOST = os.environ.get("AGRIQ_SMTP_HOST", "").strip()
+        self.AGRIQ_SMTP_PORT = int(os.environ.get("AGRIQ_SMTP_PORT", "587"))
+        self.AGRIQ_SMTP_USERNAME = os.environ.get("AGRIQ_SMTP_USERNAME", "").strip()
+        self.AGRIQ_SMTP_PASSWORD = os.environ.get("AGRIQ_SMTP_PASSWORD", "")
+        self.AGRIQ_SMTP_USE_TLS = os.environ.get("AGRIQ_SMTP_USE_TLS", "1")
+        self.AGRIQ_EMAIL_FROM = os.environ.get("AGRIQ_EMAIL_FROM", "").strip()
+        self.AGRIQ_PUBLIC_BASE_URL = os.environ.get("AGRIQ_PUBLIC_BASE_URL", "").strip()
 
     ENV = "development"
     DEBUG = False
     TESTING = False
 
-    SECRET_KEY = os.environ.get("AGRIQ_SECRET_KEY", "AGRIQ_ai_v3_private_key")
+    SECRET_KEY = os.environ.get("AGRIQ_SECRET_KEY", DEV_SECRET_KEY_FALLBACK)
     SESSION_COOKIE_NAME = "agriq_session"
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     #: Secure cookies require HTTPS; controlled via AGRIQ_COOKIE_SECURE.
     SESSION_COOKIE_SECURE = _bool(os.environ.get("AGRIQ_COOKIE_SECURE", "0"))
     PERMANENT_SESSION_LIFETIME = timedelta(hours=8)
+
+    # Phase 7.1 session lifetimes. The idle window is refreshed by activity; the
+    # absolute cap can never be extended, so a stolen cookie dies regardless.
+    AGRIQ_SESSION_IDLE_TIMEOUT_HOURS = max(
+        1, int(os.environ.get("AGRIQ_SESSION_IDLE_TIMEOUT_HOURS", "8"))
+    )
+    AGRIQ_SESSION_ABSOLUTE_TIMEOUT_HOURS = max(
+        1, int(os.environ.get("AGRIQ_SESSION_ABSOLUTE_TIMEOUT_HOURS", str(24 * 30)))
+    )
+
+    #: Origins allowed to make state-changing requests. Empty = same origin only
+    #: (AGRIQ serves its own frontend). "*" is never accepted.
+    AGRIQ_ALLOWED_ORIGINS = [
+        origin.strip()
+        for origin in os.environ.get("AGRIQ_ALLOWED_ORIGINS", "").split(",")
+        if origin.strip()
+    ]
+
+    # Phase 7.1 recovery limits + email provider (all optional; when absent the
+    # recovery endpoints report an honest unavailable state instead of faking a send).
+    AGRIQ_RATE_RECOVERY = os.environ.get("AGRIQ_RATE_RECOVERY", "5 per minute")
+    AGRIQ_PASSWORD_RESET_TTL_MINUTES = max(
+        5, int(os.environ.get("AGRIQ_PASSWORD_RESET_TTL_MINUTES", "30"))
+    )
+    AGRIQ_EMAIL_PROVIDER = os.environ.get("AGRIQ_EMAIL_PROVIDER", "").strip()
+    AGRIQ_SMTP_HOST = os.environ.get("AGRIQ_SMTP_HOST", "").strip()
+    AGRIQ_SMTP_PORT = int(os.environ.get("AGRIQ_SMTP_PORT", "587"))
+    AGRIQ_SMTP_USERNAME = os.environ.get("AGRIQ_SMTP_USERNAME", "").strip()
+    AGRIQ_SMTP_PASSWORD = os.environ.get("AGRIQ_SMTP_PASSWORD", "")
+    AGRIQ_SMTP_USE_TLS = os.environ.get("AGRIQ_SMTP_USE_TLS", "1")
+    AGRIQ_EMAIL_FROM = os.environ.get("AGRIQ_EMAIL_FROM", "").strip()
+    AGRIQ_PUBLIC_BASE_URL = os.environ.get("AGRIQ_PUBLIC_BASE_URL", "").strip()
 
     #: HSTS is only enabled when the app is served over HTTPS.
     AGRIQ_ENABLE_HSTS = _bool(os.environ.get("AGRIQ_ENABLE_HSTS", "0"))
@@ -135,13 +231,6 @@ class ProductionConfig(BaseConfig):
     ENV = "production"
     DEBUG = False
 
-    @staticmethod
-    def _required_env() -> list[str]:
-        missing = []
-        if not os.environ.get("AGRIQ_SECRET_KEY"):
-            missing.append("AGRIQ_SECRET_KEY")
-        return missing
-
     def __init__(self) -> None:  # pragma: no cover - guard rail only
         super().__init__()
         database = os.environ.get("DATABASE_URL", "")
@@ -156,14 +245,40 @@ class ProductionConfig(BaseConfig):
                 "Production requires Redis for RATELIMIT_STORAGE_URI "
                 "(e.g. redis://redis:6379/0)."
             )
-        missing = self._required_env()
-        if missing:
-            raise RuntimeError(f"Missing required production env vars: {', '.join(missing)}")
+        problem = secret_key_problem(os.environ.get("AGRIQ_SECRET_KEY"))
+        if problem:
+            raise RuntimeError(f"Unusable production AGRIQ_SECRET_KEY: {problem}")
+        if "*" in self.AGRIQ_ALLOWED_ORIGINS:
+            raise RuntimeError(
+                "AGRIQ_ALLOWED_ORIGINS must list explicit origins; '*' is not allowed "
+                "with credentialed sessions."
+            )
+        # Sessions must not outlive their absolute cap, and cookies that carry
+        # them must be HTTPS-only in production.
+        if self.AGRIQ_SESSION_IDLE_TIMEOUT_HOURS > self.AGRIQ_SESSION_ABSOLUTE_TIMEOUT_HOURS:
+            raise RuntimeError(
+                "AGRIQ_SESSION_IDLE_TIMEOUT_HOURS cannot exceed "
+                "AGRIQ_SESSION_ABSOLUTE_TIMEOUT_HOURS."
+            )
+        if not self.SESSION_COOKIE_SECURE:
+            raise RuntimeError(
+                "Production requires AGRIQ_COOKIE_SECURE=1 (session cookies must be "
+                "HTTPS-only)."
+            )
+        if self.AGRIQ_EMAIL_PROVIDER and not (self.AGRIQ_SMTP_HOST and (self.AGRIQ_EMAIL_FROM or self.AGRIQ_SMTP_USERNAME)):
+            raise RuntimeError(
+                "AGRIQ_EMAIL_PROVIDER is set but SMTP host/sender is missing. Either "
+                "configure email delivery fully or leave the provider unset (password "
+                "recovery will report PASSWORD_RESET_EMAIL_UNAVAILABLE honestly)."
+            )
 
 
 class TestingConfig(BaseConfig):
     #: Not a test class — stop pytest from collecting this config object.
     __test__ = False
+    #: Deterministic values win; the suite must not inherit a runner's secrets or
+    #: session settings.
+    REFRESH_FROM_ENVIRONMENT = False
 
     TESTING = True
     ENV = "testing"

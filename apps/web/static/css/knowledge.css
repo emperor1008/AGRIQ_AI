@@ -1,0 +1,230 @@
+/*
+ * AGRIQ AI — Farming Techniques module (Phase 7.2).
+ *
+ * Additive module: it reuses the existing tokens, glass panels, pills, ghost
+ * buttons and cards, and introduces only the layout a knowledge catalogue
+ * genuinely needs (filter grid, card grid, source/evidence blocks). No token
+ * value is redefined here and no existing class is overridden.
+ */
+
+.sr-only{
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+}
+
+.knowledge-shell .knowledge-rail a[aria-current="true"]{
+    background:rgba(34,197,94,.18);
+}
+
+.knowledge-categories a.is-active{
+    background:rgba(34,197,94,.16);
+    border-color:var(--line2);
+}
+
+.knowledge-categories a small{
+    display:block;
+    color:var(--muted);
+    font-size:11px;
+}
+
+.knowledge-filters{
+    padding:18px 20px;
+    margin:18px 0;
+}
+
+.knowledge-filter-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:12px;
+}
+
+.knowledge-filter-grid label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    color:var(--muted);
+    margin-bottom:4px;
+}
+
+.knowledge-filter-grid input,
+.knowledge-filter-grid select{
+    width:100%;
+}
+
+.knowledge-filter-actions{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    margin-top:14px;
+    flex-wrap:wrap;
+}
+
+.knowledge-note{
+    color:var(--muted);
+    font-size:13px;
+    margin:10px 0 0;
+}
+
+.knowledge-warning{
+    color:#7c2d12;
+    background:rgba(249,115,22,.12);
+    border:1px solid rgba(249,115,22,.35);
+    border-radius:12px;
+    padding:10px 14px;
+    font-size:13px;
+    margin:10px 0;
+}
+
+.knowledge-draft-notice{
+    color:var(--muted);
+    font-size:12px;
+    border-top:1px solid var(--line);
+    padding-top:10px;
+    margin-top:20px;
+}
+
+.knowledge-awaiting{
+    font-weight:600;
+}
+
+.knowledge-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+    gap:16px;
+    margin:16px 0;
+}
+
+.knowledge-card{
+    padding:16px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.knowledge-card h3{
+    margin:0;
+    font-size:18px;
+}
+
+.knowledge-card h3 a{
+    color:var(--text);
+    text-decoration:none;
+}
+
+.knowledge-card h3 a:hover{
+    color:var(--green);
+}
+
+.knowledge-card-head{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+}
+
+.knowledge-card-actions{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-top:auto;
+}
+
+.knowledge-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 18px;
+    margin:0;
+    font-size:13px;
+}
+
+.knowledge-meta dt{
+    color:var(--muted);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+}
+
+.knowledge-meta dd{
+    margin:0;
+}
+
+.knowledge-chip-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    list-style:none;
+    padding:0;
+    margin:12px 0;
+}
+
+.knowledge-subtitle{
+    color:var(--muted);
+    font-style:italic;
+}
+
+.knowledge-source{
+    border-top:1px solid var(--line);
+    padding:12px 0;
+}
+
+.knowledge-source h3{
+    margin:0 0 6px;
+    font-size:16px;
+}
+
+.knowledge-states ul{
+    margin:8px 0;
+    padding-left:18px;
+}
+
+.knowledge-pagination{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+    margin:18px 0;
+}
+
+.knowledge-count,
+.knowledge-page{
+    color:var(--muted);
+    font-size:13px;
+}
+
+.knowledge-load-more{
+    margin:0 auto;
+}
+
+.knowledge-translation{
+    color:var(--muted);
+}
+
+.knowledge-empty a{
+    display:inline-block;
+    margin-top:12px;
+}
+
+/* Evidence levels must not rely on colour alone: the value itself is always
+   printed on the chip, and the border pattern adds a second cue. */
+.knowledge-evidence[data-evidence="HISTORICAL"],
+.knowledge-evidence[data-evidence="TRADITIONAL"],
+.knowledge-evidence[data-evidence="EVIDENCE_LIMITED"]{
+    border-style:dashed;
+}
+
+.knowledge-freshness[data-status="EXPIRED"],
+.knowledge-freshness[data-status="DUE"]{
+    border-color:var(--gold);
+}
+
+@media (max-width:640px){
+    .knowledge-grid{
+        grid-template-columns:1fr;
+    }
+}

@@ -68,17 +68,41 @@ def test_csp_blocks_foreign_scripts(client):
 
 
 def test_session_cookie_flags(app, client):
-    client.get("/")
-    cookie_header = None
-    response = client.get("/")
-    # Flask test client exposes cookie via Set-Cookie when session set
-    with client.session_transaction() as session:
-        session["user_contact"] = "flagcheck@example.com"
-    response = client.get("/choose")
-    assert response.status_code == 200
+    """The cookie a real login sets must carry HttpOnly + SameSite=Lax.
+
+    Phase 7.1 rewrote this: it used to forge a cookie-only session, which the
+    hardened session layer (correctly) no longer accepts. It now drives a real
+    registration + login through the HTTP surface, so it asserts the flags on
+    the response the browser actually receives.
+    """
+    csrf = client.get("/login").get_data(as_text=True)
+    import re
+
+    match = re.search(r'name="csrf_token" value="([^"]*)"', csrf)
+    token = match.group(1) if match else ""
+    client.post("/login", data={
+        "csrf_token": token,
+        "user_contact": "flagcheck@example.com",
+        "password": "flag-check-password-1",
+        "password_confirm": "flag-check-password-1",
+        "auth_action": "register",
+    })
+    response = client.post("/login", data={
+        "csrf_token": token,
+        "user_contact": "flagcheck@example.com",
+        "password": "flag-check-password-1",
+    })
+    assert response.status_code == 302
+    set_cookie = response.headers.get("Set-Cookie", "")
+    assert "agriq_session=" in set_cookie
+    assert "HttpOnly" in set_cookie
+    assert "SameSite=Lax" in set_cookie
+    # Secure is HTTPS-only, so it is asserted through configuration here and by
+    # the production guard-rail test rather than on a plaintext test client.
     config = app.config
     assert config["SESSION_COOKIE_HTTPONLY"] is True
     assert config["SESSION_COOKIE_SAMESITE"] == "Lax"
+    assert config["SESSION_COOKIE_SECURE"] is False  # testing config only
 
 
 # ---------------------------------------------------------------------------

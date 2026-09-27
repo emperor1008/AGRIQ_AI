@@ -29,7 +29,7 @@ from ..core.audit import audit_event
 from ..core.constants import AWAITING_ANALYSIS_MESSAGE
 from ..core.exceptions import NotFoundError, ValidationError
 from ..core.logging import get_logger
-from ..core.security import current_user, get_csrf_token, require_csrf
+from ..core.security import get_csrf_token, get_current_user, require_csrf
 from ..repositories.farmer_repository import (
     CropCycleRepository,
     FieldRepository,
@@ -58,13 +58,13 @@ farmer_data_bp = Blueprint("farmer_data", __name__)
 # ---------------------------------------------------------------------------
 
 def _require_active_user():
-    """Resolve the authenticated, active user or raise."""
-    user = current_user()
-    if user is None:
-        raise NotFoundError("Sign in to continue.")
-    if not user.is_active:
-        raise NotFoundError("Sign in to continue.")
-    return user
+    """Centralised authentication dependency (Phase 7.1).
+
+    Returns the authenticated, active user or raises ``AuthRequiredError``
+    (401) so the client can tell "session expired" apart from "record not
+    found" (404) and redirect to the login page exactly once.
+    """
+    return get_current_user()
 
 
 def _require_profile(user_id: int):

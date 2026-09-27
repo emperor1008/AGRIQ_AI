@@ -1,5 +1,7 @@
 """SQLAlchemy models package."""
 from .user import User  # noqa: F401
+from .user_session import UserSession  # noqa: F401
+from .password_reset import PasswordResetToken  # noqa: F401
 from .knowledge import (  # noqa: F401
     AssistantRun,
     KnowledgeChunk,
@@ -17,6 +19,15 @@ from .image_analysis import (  # noqa: F401
     ImageAnalysisFeedback,
 )
 from .risk import RiskAssessment  # noqa: F401
+from .farming_knowledge import (  # noqa: F401
+    FarmingTechnique,
+    KnowledgeEvidence,
+    KnowledgeTranslation,
+    PesticideInformation,
+    PesticideTarget,
+    TechniqueCrop,
+    TechniqueRegion,
+)
 from .farmer import (  # noqa: F401
     Conversation,
     CropCycle,
@@ -34,6 +45,8 @@ from .farmer import (  # noqa: F401
 
 __all__ = [
     "User",
+    "UserSession",
+    "PasswordResetToken",
     "FarmerProfile",
     "Farm",
     "Field",
@@ -57,4 +70,11 @@ __all__ = [
     "ImageAnalysis",
     "ImageAnalysisFeedback",
     "RiskAssessment",
+    "FarmingTechnique",
+    "TechniqueCrop",
+    "TechniqueRegion",
+    "KnowledgeEvidence",
+    "KnowledgeTranslation",
+    "PesticideInformation",
+    "PesticideTarget",
 ]

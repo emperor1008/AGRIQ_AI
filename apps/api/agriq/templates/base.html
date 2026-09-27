@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ language_meta.html_lang if language_meta else 'en' }}">
 <head>
     <meta charset="UTF-8">
     <title>AGRIQ AI | Crop Intelligence</title>
@@ -21,9 +21,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/responsive.css') }}">
+    {# Phase 7.2: additive module for the Farming Techniques catalogue. #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/knowledge.css') }}">
 </head>
 
-<body class="{% if page == 'login' %}auth-theme mixed-doodles{% elif page == 'choose' %}choose-theme mixed-doodles{% elif page == 'dashboard' and user_mode == 'farmer' %}farmer-theme farm-doodles{% elif page == 'dashboard' and user_mode == 'student' %}student-theme research-doodles{% endif %}">
+<body class="{% if page == 'login' %}auth-theme mixed-doodles{% elif page == 'choose' %}choose-theme mixed-doodles{% elif page == 'dashboard' and user_mode == 'farmer' %}farmer-theme farm-doodles{% elif page == 'dashboard' and user_mode == 'student' %}student-theme research-doodles{% elif page == 'knowledge' and user_mode == 'student' %}student-theme research-doodles{% elif page == 'knowledge' %}farmer-theme farm-doodles{% endif %}">
 
 <div class="doodle-bg" aria-hidden="true">
     <span class="doodle d1"></span>
@@ -53,6 +55,25 @@
 </div>
 
 {% block content %}{% endblock %}
+
+{% if page == "knowledge" %}
+<script>
+/* Phase 7.2: the same catalogs the server renders with, scoped to the
+   browser-needed subset (interface strings only, never source text). */
+window.AGRIQ_I18N = {
+    lang: {{ language | tojson }},
+    status: {{ ui_translation_status | tojson }},
+    messages: {{ browser_messages | tojson }} 
+};
+window.AgriqBoot = {
+    userMode: "{{ user_mode or 'farmer' }}",
+    language: {{ language | tojson }}
+};
+</script>
+<script src="{{ url_for('static', filename='js/api-client.js') }}"></script>
+<script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+<script src="{{ url_for('static', filename='js/farming-techniques.js') }}"></script>
+{% endif %}
 
 {% if page == "dashboard" %}
 <script>

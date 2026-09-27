@@ -1,5 +1,14 @@
 # Knowledge Sources (Phase 2)
 
+> **Phase 7.2 note.** This document describes the Phase 2 ingestion path, which is
+> still in use: `knowledge_sources` + `knowledge_chunks` remain the provenance and
+> retrieval layer. Farming Techniques ("Farming Techniques & Agricultural Knowledge")
+> writes into these same two tables through `integrations/knowledge/farming_import.py`
+> and serves from them through the same approved-only gate. Its own architecture,
+> catalog, safety policy and translation rules are documented in
+> [knowledge-architecture.md](knowledge-architecture.md); the sources actually used and
+> their verification are in [audits/PHASE7_2_KNOWLEDGE_AUDIT.md](audits/PHASE7_2_KNOWLEDGE_AUDIT.md).
+
 ## Registry model
 
 Knowledge lives in two tables:

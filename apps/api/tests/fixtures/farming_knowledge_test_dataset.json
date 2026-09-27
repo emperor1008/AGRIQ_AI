@@ -1,0 +1,172 @@
+{
+  "dataset_version": "test-fixture-1",
+  "review_policy": "TEST FIXTURE ONLY. Every record here is a synthetic placeholder used to exercise the import/review/serving pipeline in automated tests. None of it is agricultural advice, none of it is production knowledge, and the URLs point at the RFC 2606 reserved documentation domain, which is exactly why the importer only accepts these hosts when a caller passes --allow-test-hosts / allow_test_hosts=True.",
+  "techniques": [
+    {
+      "slug": "fixture-test-mulching",
+      "category": "traditional",
+      "title": "TEST FIXTURE — soil surface cover (not agricultural advice)",
+      "summary": "Fixture record used by the test-suite to exercise listing, filtering and detail rendering.",
+      "overview": "Fixture overview text. This is not a real agricultural claim; it exists so the test-suite has a verified record to serve.",
+      "principle": "Fixture principle text.",
+      "method_practice": "Fixture method text.",
+      "application_practice": "Fixture application text.",
+      "preparation_instructions": "Fixture preparation text.",
+      "when_useful": "Fixture context text.",
+      "benefits": "Fixture benefit text.",
+      "limitations": "Fixture limitation text. The record is synthetic.",
+      "safety_precautions": "Fixture precaution text.",
+      "modern_relevance": "Fixture modern-relevance text.",
+      "key_concepts": "Fixture key concept.",
+      "study_summary": "Fixture study summary.",
+      "historical_period": "Fixture period",
+      "region_scope": "Test region",
+      "crops": ["Test crop"],
+      "regions": [
+        {"region": "Test region", "scope_note": "Fixture scope note."}
+      ],
+      "evidence_level": "TRADITIONAL",
+      "evidence": [
+        {
+          "evidence_level": "TRADITIONAL",
+          "claim": "Fixture claim used to check that evidence rows are rendered with their level.",
+          "source_section": "Fixture section",
+          "note": "Synthetic."
+        }
+      ],
+      "preparation_status": "DOCUMENTED",
+      "application_status": "DOCUMENTED",
+      "source": {
+        "source_key": "fixture-source-traditional",
+        "title": "Fixture source document (synthetic)",
+        "organisation": "ICAR",
+        "url": "https://example.org/fixture-source-document",
+        "source_type": "RESEARCH_INSTITUTE",
+        "document_type": "extension_material",
+        "publication_date": "2026-01-15",
+        "accessed_at": "2026-09-26",
+        "licence_note": "Synthetic test fixture; not a real publication.",
+        "region": "Test region"
+      }
+    },
+    {
+      "slug": "fixture-test-ancient-practice",
+      "category": "ancient",
+      "title": "TEST FIXTURE — historical practice (not agricultural advice)",
+      "summary": "Fixture record used to exercise the historical-evidence labelling and the PREPARATION_DATA_UNAVAILABLE state.",
+      "overview": "Fixture overview text for the historical record.",
+      "historical_context": "Fixture historical context text.",
+      "region_scope": "Test region",
+      "crops": [],
+      "crop_scope_note": "Fixture note: the synthetic source is not crop-specific.",
+      "regions": [
+        {"region": "Test region", "scope_note": "Fixture scope note."}
+      ],
+      "evidence_level": "HISTORICAL",
+      "evidence": [
+        {
+          "evidence_level": "HISTORICAL",
+          "claim": "Fixture historical claim.",
+          "source_section": "Fixture section"
+        }
+      ],
+      "preparation_status": "PREPARATION_DATA_UNAVAILABLE",
+      "application_status": "APPLICATION_DATA_UNVERIFIED",
+      "source": {
+        "source_key": "fixture-source-ancient",
+        "title": "Fixture historical source (synthetic)",
+        "organisation": "ICAR",
+        "url": "https://example.org/fixture-historical-source",
+        "source_type": "HISTORICAL_REFERENCE",
+        "document_type": "historical_reference",
+        "publication_date": null,
+        "date_note": "Synthetic fixture deliberately without a date, to exercise the date_note path.",
+        "accessed_at": "2026-09-26",
+        "licence_note": "Synthetic test fixture; not a real publication.",
+        "region": "Test region"
+      }
+    }
+  ],
+  "pesticides": [
+    {
+      "slug": "fixture-test-product",
+      "record_type": "ACTIVE_INGREDIENT",
+      "active_ingredient": "TEST FIXTURE product (not a real pesticide)",
+      "common_name": "Fixture product",
+      "pesticide_category": "BIO_FUNGICIDE",
+      "chemical_group": "Fixture group",
+      "mode_of_action": "Fixture mode-of-action text.",
+      "approved_use": "Fixture approved-use text.",
+      "registered_crops": "Test crop",
+      "label_directions_reference": "Fixture reference to an official document (synthetic).",
+      "ppe": "Fixture protective-equipment text.",
+      "pre_harvest_interval": null,
+      "resistance_management": "Fixture resistance text.",
+      "environmental_precautions": "Fixture environmental text.",
+      "storage_handling": "Fixture storage text.",
+      "regulatory_status": "Fixture regulatory text.",
+      "first_aid_note": "Fixture first-aid text.",
+      "targets": [
+        {"crop": "Test crop", "target": "Fixture pest", "target_kind": "pest", "notes": "Fixture target note."}
+      ],
+      "application_status": "APPLICATION_DATA_UNVERIFIED",
+      "region_scope": "Test region",
+      "evidence_level": "REGULATORY",
+      "evidence": [
+        {
+          "evidence_level": "REGULATORY",
+          "claim": "Fixture regulatory claim.",
+          "source_section": "Fixture section"
+        }
+      ],
+      "source": {
+        "source_key": "fixture-source-product",
+        "title": "Fixture product list (synthetic)",
+        "organisation": "Directorate of Plant Protection, Quarantine and Storage",
+        "url": "https://example.org/fixture-product-list",
+        "source_type": "GOVERNMENT",
+        "document_type": "product_information",
+        "publication_date": "2026-01-31",
+        "accessed_at": "2026-09-26",
+        "licence_note": "Synthetic test fixture; not a real publication.",
+        "region": "Test region"
+      }
+    },
+    {
+      "slug": "fixture-test-safety-guidance",
+      "record_type": "SAFETY_GUIDANCE",
+      "title": "TEST FIXTURE safety guidance (not agricultural advice)",
+      "pesticide_category": "SAFETY_GUIDANCE",
+      "approved_use": "Fixture safe-use text.",
+      "ppe": "Fixture protective-equipment text.",
+      "storage_handling": "Fixture storage text.",
+      "environmental_precautions": "Fixture disposal text.",
+      "first_aid_note": "Fixture first-aid text.",
+      "regulatory_status": "Fixture regulatory text.",
+      "label_directions_reference": "Fixture reference (synthetic).",
+      "targets": [],
+      "application_status": "APPLICATION_DATA_UNVERIFIED",
+      "region_scope": "Test region",
+      "evidence_level": "REGULATORY",
+      "evidence": [
+        {
+          "evidence_level": "REGULATORY",
+          "claim": "Fixture guidance claim.",
+          "source_section": "Fixture section"
+        }
+      ],
+      "source": {
+        "source_key": "fixture-source-safety-guidance",
+        "title": "Fixture safe-use instructions (synthetic)",
+        "organisation": "Directorate of Plant Protection, Quarantine and Storage",
+        "url": "https://example.org/fixture-safe-use",
+        "source_type": "GOVERNMENT",
+        "document_type": "advisory",
+        "publication_date": "2026-01-31",
+        "accessed_at": "2026-09-26",
+        "licence_note": "Synthetic test fixture; not a real publication.",
+        "region": "Test region"
+      }
+    }
+  ]
+}

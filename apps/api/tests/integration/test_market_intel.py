@@ -90,12 +90,17 @@ def seed_price_history(days: int, *, district: str = "Cuttack", commodity: str =
 
 @pytest.mark.parametrize("route", MARKET_GET_ROUTES)
 def test_market_views_require_authentication(client, route):
-    assert client.get(route).status_code == 404
+    """Phase 7.1: 401 + AUTH_UNAUTHORIZED, so clients can redirect to sign-in."""
+    response = client.get(route)
+    assert response.status_code == 401
+    assert response.get_json()["code"] == "AUTH_UNAUTHORIZED"
 
 
 @pytest.mark.parametrize("route", MARKET_POST_ROUTES)
 def test_market_actions_require_authentication(client, route):
-    assert client.post(route, json={}).status_code == 404
+    response = client.post(route, json={})
+    assert response.status_code == 401
+    assert response.get_json()["code"] == "AUTH_UNAUTHORIZED"
 
 
 @pytest.mark.parametrize("route", MARKET_POST_ROUTES)

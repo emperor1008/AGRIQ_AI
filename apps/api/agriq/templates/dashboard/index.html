@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "components/_macros.html" import side_rail, topbar, product_hero, section_launcher, dropdown_card, assistant_panel %}
+{% from "components/_macros.html" import side_rail, topbar, product_hero, section_launcher, dropdown_card, assistant_panel with context %}
 
 {% block content %}
 <div class="app-shell">
@@ -148,16 +148,26 @@
                     <button type="button" class="mini-refresh-btn" onclick="refreshLiveWeather()">Refresh Weather</button>
                 </div>
 
+                {# An unavailable provider is a first-class state: the real cause is
+                   named and no value is invented. This mirrors what
+                   weather.js renderWeatherConsole does after a refresh, so the
+                   server-rendered and refreshed views cannot disagree. #}
                 <div class="weather-now-grid" id="weatherNowGrid">
+                    {% if analysis.weather_console.available %}
                     <div class="weather-tile"><span>Temperature</span><strong>{{ analysis.weather_console.current.temp }}°C</strong><small>{{ analysis.weather_console.current.condition }}</small></div>
                     <div class="weather-tile"><span>Humidity</span><strong>{{ analysis.weather_console.current.humidity }}%</strong><small>Leaf wetness indicator</small></div>
                     <div class="weather-tile"><span>Rain Now</span><strong>{{ analysis.weather_console.current.rain }} mm</strong><small>Current precipitation</small></div>
                     <div class="weather-tile"><span>Wind</span><strong>{{ analysis.weather_console.current.wind }} km/h</strong><small>Spray timing factor</small></div>
                     <div class="weather-tile live-tile"><span>Status</span><strong>{{ analysis.weather_console.live_badge }}</strong><small>Updated {{ analysis.weather_console.updated_at }}</small></div>
+                    {% else %}
+                    <div class="weather-tile live-tile"><span>Status</span><strong>{{ analysis.weather_console.live_badge }}</strong><small>{{ analysis.weather_console.state_message or 'Verified data is currently unavailable.' }}</small></div>
+                    {% endif %}
                 </div>
 
                 <div class="weather-meta-card">
+                    {% if analysis.weather_console.available and not analysis.weather_console.stale %}
                     <b>Weather time:</b> {{ analysis.weather_console.current.time }}<br>
+                    {% endif %}
                     <b>Source:</b> {{ analysis.weather_console.source_note }}<br>
                     <b>Soil & water note:</b> {{ analysis.weather_console.soil_water_note }}
                 </div>
@@ -170,6 +180,10 @@
                 </div>
 
                 <h4>7-Day Weather Outlook</h4>
+                {% if not analysis.weather_console.daily %}
+                <p class="empty-state">No verified forecast is shown: provider forecast rows are
+                    only displayed when this deployment actually received them.</p>
+                {% endif %}
                 <div class="daily-weather-grid" id="dailyWeatherRows">
                     {% for d in analysis.weather_console.daily %}
                     <div class="daily-card">

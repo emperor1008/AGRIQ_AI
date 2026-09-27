@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% from "components/_macros.html" import language_switcher with context %}
+
+{% block content %}
+<div class="app-shell knowledge-shell">
+    <aside class="side-rail {% if user_mode == 'student' %}student-rail{% else %}farmer-rail{% endif %} knowledge-rail">
+        <div class="rail-logo">{% if user_mode == "student" %}🎓{% else %}🌾{% endif %}</div>
+        <a href="/dashboard" title="{{ t('common.dashboard') }}">🏠</a>
+        <a href="#knowledgeCategories" title="{{ t('knowledge.title') }}">📖</a>
+        <a href="#knowledgeSearch" title="{{ t('knowledge.search_label') }}">🔍</a>
+        <a href="#knowledgeResults" title="{{ t('knowledge.results_heading') }}">🗂️</a>
+        <a href="/logout" title="{{ t('common.logout') }}">⏻</a>
+    </aside>
+
+    <main class="main-stage">
+        <header class="topbar">
+            <div>
+                <div class="brand AGRIQ-glow">🌾 AGRIQ AI</div>
+                <div class="brand-sub">{{ t('knowledge.subtitle') }}</div>
+            </div>
+            <div class="top-actions">
+                <div class="pill">{{ engine_mode }}</div>
+                <div class="pill">{% if mode == "student" %}🎓 {{ t('knowledge.student_view') }}{% else %}🌾 {{ t('knowledge.farmer_view') }}{% endif %}</div>
+                {{ language_switcher() }}
+                <a class="logout" href="/dashboard">{{ t('common.back_to_dashboard') }}</a>
+            </div>
+        </header>
+
+        <section class="product-hero">
+            <div>
+                <span class="hero-eyebrow">{{ t('knowledge.section_kicker') }}</span>
+                <h1>{{ t('knowledge.title') }}</h1>
+                <p>{{ t('knowledge.subtitle') }}</p>
+            </div>
+            <div class="hero-signal">
+                <div class="signal-dot"></div>
+                <span>
+                    {% if overview.verified_total %}
+                    {{ t('common.result_count', count=overview.verified_total) }}
+                    {% else %}{{ t('common.data_unavailable') }}{% endif %}
+                </span>
+            </div>
+        </section>
+
+        <nav class="section-launcher glass-panel knowledge-categories" id="knowledgeCategories"
+             aria-label="{{ t('knowledge.filter_category') }}">
+            <a href="{{ url_for('knowledge.index_page', lang=language if language != 'en' else None) }}"
+               class="{% if not selected.category %}is-active{% endif %}" {% if not selected.category %}aria-current="true"{% endif %}>
+                📚<span>{{ t('common.all') }}</span>
+            </a>
+            {% for category in categories %}
+            <a href="{{ url_for('knowledge.index_page', category=category.code, lang=language if language != 'en' else None) }}"
+               class="{% if selected.category == category.code %}is-active{% endif %}"
+               {% if selected.category == category.code %}aria-current="true"{% endif %}
+               data-category="{{ category.code }}" data-verified="{{ category.verified }}">
+                {% if category.code == 'ancient' %}🏺
+                {% elif category.code == 'traditional' %}🌱
+                {% elif category.code == 'modern' %}🛠️
+                {% elif category.code == 'organic_biological' %}🐞
+                {% else %}🧪{% endif %}
+                <span>{{ t(category.label_key) }}</span>
+                <small>{{ category.verified }}</small>
+            </a>
+            {% endfor %}
+        </nav>
+
+        <section class="glass-panel knowledge-filters" id="knowledgeSearch">
+            <form method="get" action="{{ url_for('knowledge.index_page') }}" role="search">
+                <div class="knowledge-filter-grid">
+                    <div class="knowledge-search-field">
+                        <label for="knowledgeSearchInput">{{ t('knowledge.search_label') }}</label>
+                        <input type="search" id="knowledgeSearchInput" name="q"
+                               value="{{ selected.q or '' }}"
+                               placeholder="{{ t('knowledge.search_placeholder') }}"
+                               maxlength="120" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="knowledgeCategorySelect">{{ t('knowledge.filter_category') }}</label>
+                        <select id="knowledgeCategorySelect" name="category">
+                            <option value="">{{ t('common.all') }}</option>
+                            {% for category in categories %}
+                            <option value="{{ category.code }}" {% if selected.category == category.code %}selected{% endif %}>{{ t(category.label_key) }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="knowledgeCropSelect">{{ t('knowledge.filter_crop') }}</label>
+                        <select id="knowledgeCropSelect" name="crop">
+                            <option value="">{{ t('common.all') }}</option>
+                            {% for crop in facets.crops %}
+                            <option value="{{ crop }}" {% if selected.crop == crop %}selected{% endif %}>{{ crop }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="knowledgeRegionSelect">{{ t('knowledge.filter_region') }}</label>
+                        <select id="knowledgeRegionSelect" name="region">
+                            <option value="">{{ t('common.all') }}</option>
+                            {% for region in facets.regions %}
+                            <option value="{{ region }}" {% if selected.region == region %}selected{% endif %}>{{ region }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="knowledgeEvidenceSelect">{{ t('knowledge.filter_evidence') }}</label>
+                        <select id="knowledgeEvidenceSelect" name="evidence">
+                            <option value="">{{ t('common.all') }}</option>
+                            {% for level in facets.evidence_levels %}
+                            <option value="{{ level }}" {% if selected.evidence == level %}selected{% endif %}>{{ level }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% if language and language != 'en' %}
+                    <input type="hidden" name="lang" value="{{ language }}">
+                    {% endif %}
+                </div>
+                <div class="knowledge-filter-actions">
+                    <button type="submit">{{ t('knowledge.search_button') }}</button>
+                    <a class="ghost-btn" href="{{ url_for('knowledge.index_page', lang=language if language != 'en' else None) }}">{{ t('common.clear_filters') }}</a>
+                </div>
+            </form>
+            <p class="knowledge-note">{{ t('knowledge.mode_hint') }}</p>
+            {% if knowledge_status.pending_records %}
+            <p class="knowledge-note knowledge-awaiting">{{ t('knowledge.awaiting_review', count=knowledge_status.pending_records) }}</p>
+            {% endif %}
+        </section>
+
+        <section class="report-area">
+            <div class="section-heading">
+                <span class="section-kicker">{% if mode == 'student' %}{{ t('knowledge.student_view') }}{% else %}{{ t('knowledge.farmer_view') }}{% endif %} • {{ t('knowledge.detail_kicker') }}</span>
+                <h2>{{ t('knowledge.results_heading') }}</h2>
+                <p>{{ t('common.result_count', count=listing.count) }}</p>
+            </div>
+
+            {% include "knowledge/_results.html" %}
+        </section>
+
+        {% if ui_translation_status == 'TRANSLATION_PENDING_REVIEW' %}
+        <p class="knowledge-draft-notice" role="note">{{ t('language_notice.draft') }}</p>
+        {% endif %}
+    </main>
+</div>
+{% endblock %}

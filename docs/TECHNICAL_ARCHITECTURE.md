@@ -108,8 +108,42 @@ Redis in production (`ProductionConfig` refuses `memory://`).
   follow `docs/TECHNICAL_ARCHITECTURE.md` initial schema; migrations live
   in `apps/api/migrations/` (DATA-01).
 
+## Farming Techniques knowledge layer (Phase 7.2)
+
+```text
+HTML page / JSON client
+  → api/knowledge.py            auth (get_current_user), input validation, i18n
+  → services/farming_knowledge.py
+       ├─ list_entries()        category/crop/region/evidence/q + pagination
+       ├─ entry_detail()        role projection (farmer | student) + freshness
+       ├─ retrieve_verified_knowledge()   passages the assistant may cite
+       └─ categories/facets/status/source_index
+  → repositories/farming_knowledge_repository.py
+       └─ every read: review_status == VERIFIED AND source approved
+  → models/farming_knowledge.py  (SQLite dev / PostgreSQL production)
+
+services/knowledge_safety.py  → manufacturing / recipe / dosage intent guard
+integrations/knowledge/farming_import.py → validated import (no network fetch)
+cli/import_farming_knowledge.py + cli/review_knowledge.py → the only write paths
+i18n/__init__.py + i18n/locales/{en,or,hi}.json → one translation entry point
+```
+
+Farmer Mode and Student Mode read the **same** records; only the section ordering
+and the study aids differ, so there is no second copy of any agricultural fact.
+
+### Translation behaviour
+
+Interface strings come from the JSON catalogs (server `t()` + `AgriqI18n.t()` in the
+browser, both fed by the same file). Agricultural content is translated **only** from
+a `knowledge_translations` row with `review_status = REVIEWED` added by the review CLI
+with a reviewer name; safety-critical fields keep the source-language original visible
+beside the translation. Odia and Hindi catalogs are `TRANSLATION_PENDING_REVIEW`, so
+the UI states that the interface translation is a draft.
+
 ## Route compatibility
 
 Unchanged: `/`, `/login`, `/choose`, `/choose-mode`, `/dashboard`,
 `/ask-ai`, `/api/live-weather`, `/logout`, `/healthz`.
 `/logout` now prefers POST + CSRF; plain GET remains for the side-rail link.
+Phase 7.2 adds `/farming-techniques*` and `/api/v1/farming-techniques*` — additions
+only; no existing route was renamed, moved or removed.

@@ -26,7 +26,7 @@ from ..core.audit import audit_event
 from ..core.config import get_config
 from ..core.exceptions import NotFoundError, ValidationError
 from ..core.logging import get_logger
-from ..core.security import current_user, require_csrf
+from ..core.security import get_current_user, require_csrf
 from ..schemas.voice import (
     parse_confirm_payload,
     parse_consent_payload,
@@ -41,10 +41,8 @@ voice_bp = Blueprint("voice", __name__)
 
 
 def _require_active_user():
-    user = current_user()
-    if user is None or not user.is_active:
-        raise NotFoundError("Sign in to continue.")
-    return user
+    """Centralised authentication dependency (Phase 7.1); 401 when not signed in."""
+    return get_current_user()
 
 
 # ---------------------------------------------------------------------------

@@ -47,6 +47,7 @@ from ..integrations.ai import gemini
 from ..integrations.knowledge.retriever import KnowledgeRetriever
 from ..repositories.copilot_repository import AssistantRunRepository, ConversationRepository
 from . import conversation_service
+from . import knowledge_safety
 from . import recommendation_service
 from .crop_cycle_advisor import build_stage_recommendation
 from .farmer_context import build_farmer_context
@@ -151,6 +152,12 @@ def run_copilot(
     )
     emergency = chemical.escalate_emergency
 
+    # -- 8b. Knowledge safety gate (Phase 7.2 §26) ----------------------------
+    # Deterministic, code-enforced: manufacturing/synthesis requests are refused
+    # outright and preparation/application requests without a reviewed source
+    # state their canonical missing-information token instead of being answered.
+    knowledge_gate = knowledge_safety.check_knowledge_request(question, language=language)
+
     # -- 9. Evidence package ---------------------------------------------------
     evidence_items = []
     weather_item = weather_evidence(weather)
@@ -199,6 +206,14 @@ def run_copilot(
     if chemical.blocked and not emergency:
         recommendation.reasons.append(chemical.reason or "Blocked by safety guardrails.")
         recommendation.requires_expert_confirmation = True
+    if knowledge_gate.blocked:
+        if knowledge_gate.message:
+            recommendation.reasons.append(knowledge_gate.message)
+        if knowledge_gate.status not in recommendation.missing_information:
+            recommendation.missing_information.append(knowledge_gate.status)
+        recommendation.requires_expert_confirmation = (
+            recommendation.requires_expert_confirmation or knowledge_gate.requires_expert
+        )
 
     # -- 11. Confidence --------------------------------------------------------
     confidence = recommendation.confidence or compute_confidence(
@@ -241,6 +256,11 @@ def run_copilot(
         # Short-circuit: emergency handover never needs a model call.
         answer_text = escalation.handover_message
         provider_status = "skipped_emergency"
+    elif knowledge_gate.refusal_code == knowledge_safety.REFUSAL_MANUFACTURING:
+        # Manufacturing/synthesis is refused by policy: no model call is made
+        # for it, so no model can be talked into writing a recipe.
+        answer_text = knowledge_gate.message
+        provider_status = "blocked_safety"
     else:
         prompt = build_copilot_prompt(
             question=question, context=context,            intent=intent,
@@ -248,6 +268,7 @@ def run_copilot(
             memory=memory, language=language, escalation=escalation,
             chemical=chemical, response_mode=response_mode,
             market_intelligence=market_intel,
+            knowledge_gate=knowledge_gate,
         )
         provider_result = gemini.generate(
             prompt,
@@ -757,6 +778,7 @@ def build_copilot_prompt(
     chemical,
     response_mode: str,
     market_intelligence: Optional[dict[str, Any]] = None,
+    knowledge_gate: Any = None,
 ) -> str:
     """Build the copilot prompt: verified context in, grounded answer out.
 
@@ -872,6 +894,19 @@ def build_copilot_prompt(
         lines.append(f"- EXPERT ESCALATION ACTIVE ({escalation.urgency}): include the handover message: {escalation.handover_message}")
     if chemical.blocked:
         lines.append(f"- SAFETY BLOCK: {chemical.reason}")
+    if knowledge_gate is not None and knowledge_gate.blocked:
+        lines.append(
+            "- KNOWLEDGE SAFETY STATE "
+            f"({knowledge_gate.status}): {knowledge_gate.message} "
+            "Do not replace this state with a recipe, a dose, a source or any "
+            "other detail that is not in the verified context above."
+        )
+    if knowledge_gate is not None and not knowledge_gate.blocked:
+        lines.append(
+            "- KNOWLEDGE vs RECOMMENDATION: an entry existing in the knowledge "
+            "base is NOT a recommendation for this field. Only say a practice "
+            "is suitable when the verified farmer context above supports it."
+        )
 
     if response_mode == "compact":
         lines.append(

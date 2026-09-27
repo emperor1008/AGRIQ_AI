@@ -57,12 +57,17 @@ def dashboard():
     context = None
 
     # Phase 1: shared farmer context for the My Farm Data section.
+    # Phase 7.3: weather IS requested here. It used to be skipped
+    # (include_weather=False) while the "Data Source and Freshness" panel still
+    # rendered from context.weather — so that panel said "Verified data is
+    # currently unavailable." on every load no matter how healthy the provider
+    # was. The real state (with its classified reason) is now reported instead.
     if user_mode == MODE_FARMER:
         user = current_user()
         if user is not None:
             try:
                 context = farmer_context_service.build_farmer_context(
-                    user.id, include_weather=False
+                    user.id, include_weather=True
                 )
                 if context.get("crop_cycle") and context["crop_cycle"].get("id"):
                     # Stamp the active cycle id for the stage-confirm form.

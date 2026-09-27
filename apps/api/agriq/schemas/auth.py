@@ -31,4 +31,16 @@ def parse_credentials(contact_raw: str | None, password_raw: str | None) -> Cred
     )
 
 
-__all__ = ["Credentials", "parse_credentials"]
+def is_valid_contact(contact: str | None) -> bool:
+    """True for an acceptable email address or 10-digit Indian mobile number.
+
+    Single source of truth shared by registration, login and password recovery,
+    so those three can never disagree about what a valid contact is.
+    """
+    value = clean_text(contact, CONTACT_MAX).lower()
+    if not value:
+        return False
+    return bool(_EMAIL_RE.match(value) or _PHONE_RE.match(value))
+
+
+__all__ = ["Credentials", "parse_credentials", "is_valid_contact"]

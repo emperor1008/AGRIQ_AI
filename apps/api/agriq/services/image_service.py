@@ -106,8 +106,17 @@ class CropImageService:
 
     def available(self) -> bool:
         """True only when an approved model with a passing checksum exists
-        for at least one supported crop. Drives the UI's honest state."""
-        from ml.inference.registry import ModelRegistry
+        for at least one supported crop. Drives the UI's honest state.
+
+        The import is inside the guard on purpose: when the ``ml`` package is
+        not importable in this process (for example a local run whose working
+        directory does not expose the repository root) the honest answer is
+        "not available", not a 500 that the capability probe cannot explain.
+        """
+        try:
+            from ml.inference.registry import ModelRegistry
+        except Exception:  # noqa: BLE001 — missing package = unavailable
+            return False
 
         try:
             registry = ModelRegistry()
@@ -126,10 +135,21 @@ class CropImageService:
 
         processed_bytes, processed_ext = _processed_copy(img)
 
-        from ml.inference.predictor import CropImagePredictor
+        try:
+            from ml.inference.predictor import CropImagePredictor
+        except Exception:  # noqa: BLE001 — no inference package = honest unavailable
+            CropImagePredictor = None  # type: ignore[assignment]
 
-        predictor = CropImagePredictor()
-        result = predictor.analyse(file_bytes=processed_bytes, expected_crop=expected_crop)
+        if CropImagePredictor is None:
+            result = _UnavailableResult(
+                "Crop-image screening is not available in this deployment: the "
+                "inference package is not installed. Nothing was analysed and no "
+                "result was generated."
+            )
+        else:
+            result = CropImagePredictor().analyse(
+                file_bytes=processed_bytes, expected_crop=expected_crop
+            )
 
         record: dict[str, Any] = {
             "expected_crop": expected_crop,
@@ -202,6 +222,21 @@ class CropImageService:
             return False
         ImageAnalysisRepository.soft_delete(row)
         return True
+
+
+class _UnavailableResult:
+    """Stand-in for an inference result when no model package is importable.
+
+    Keeps the single honest ``unavailable`` branch of ``analyse_upload`` in charge
+    of the response, so a deployment without the inference package answers
+    "nothing was analysed" instead of raising.
+    """
+
+    status = "unavailable"
+    analysis: dict[str, Any] = {}
+
+    def __init__(self, message: str) -> None:
+        self.message = message
 
 
 def _dumps(value: Any) -> str | None:

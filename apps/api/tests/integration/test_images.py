@@ -190,9 +190,16 @@ class TestFeedbackAndDeletion:
         assert response.status_code == 200
         assert auth_client.get(f"/api/v1/crop-images/analyses/{analysis_id}").status_code == 404
 
-    def test_unauthenticated_is_404(self, client, analyse_url):
+    def test_unauthenticated_is_401(self, client, analyse_url):
+        """Phase 7.1: an unauthenticated API call is 401, not 404.
+
+        The frontend must be able to tell "session expired" apart from "record
+        not found" to redirect to the login page instead of showing an empty
+        state. Cross-user access still answers 404 so nothing is enumerated.
+        """
         response = client.get("/api/v1/crop-images/capabilities")
-        assert response.status_code == 404
+        assert response.status_code == 401
+        assert response.get_json()["code"] == "AUTH_UNAUTHORIZED"
 
 
 class TestRouteRegression:
@@ -260,13 +267,15 @@ class TestMigrationChain:
         cfg.set_main_option("script_location", str(API_DIR / "migrations"))
         return cfg
 
-    def test_head_is_the_latest_phase5_revision(self):
-        """Phase 5 owns the head: 0005 creates the table, 0006 adds provenance."""
+    def test_head_is_the_latest_auth_revision(self):
+        """The chain is intact and ordered, head last."""
         from alembic.script import ScriptDirectory
 
         script = ScriptDirectory.from_config(self._alembic_cfg())
-        assert script.get_heads() == ["0006_risk_provenance"]
-        # The Phase 5 chain is intact and ordered, not merely present.
+        assert script.get_heads() == ["0008_farming_knowledge"]
+        assert script.get_revision("0008_farming_knowledge").down_revision == "0007_auth_sessions"
+        assert script.get_revision("0007_auth_sessions").down_revision == "0006_risk_provenance"
+        # The Phase 5 chain stays intact and ordered, not merely present.
         assert script.get_revision("0006_risk_provenance").down_revision == "0005_phase5_risk"
         assert script.get_revision("0005_phase5_risk").down_revision == "0004_phase4_image"
 

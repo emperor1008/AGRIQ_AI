@@ -11,12 +11,15 @@
     var daily = document.getElementById("dailyWeatherRows");
     if (!consoleData || !nowGrid) return;
 
-    // Unavailable state: show the canonical message, never generated values.
+    // Unavailable state: show the canonical message plus the backend's
+    // state-specific cause (location missing, provider outage, configuration),
+    // never generated values.
     if (consoleData.available === false) {
       nowGrid.innerHTML =
         '<div class="weather-tile live-tile"><span>Status</span><strong>' +
         (consoleData.live_badge || "UNAVAILABLE") + '</strong><small>' +
-        (consoleData.message || "Verified data is currently unavailable.") + '</small></div>';
+        (consoleData.state_message || consoleData.message ||
+          "Verified data is currently unavailable.") + '</small></div>';
       var meta0 = document.querySelector(".weather-meta-card");
       if (meta0) {
         meta0.innerHTML = "<b>Source:</b> " + (consoleData.source_note || "");

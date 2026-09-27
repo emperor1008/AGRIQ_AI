@@ -44,5 +44,11 @@ class UserRepository:
         user.is_active = active
         db.session.commit()
 
+    @staticmethod
+    def set_password(user: User, password: str) -> None:
+        """Replace the stored password hash (scrypt) for a user."""
+        user.set_password(password)
+        db.session.commit()
+
 
 __all__ = ["UserRepository"]

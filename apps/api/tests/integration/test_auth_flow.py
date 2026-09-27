@@ -33,17 +33,20 @@ def test_index_shows_login_for_guest(client):
     assert "AGRIQ AI" in response.get_data(as_text=True)
 
 
-def test_real_account_registration_and_login(client):
+def test_real_account_registration_and_login(client, login_csrf):
     """Phase 1: real accounts — register with password, then sign in."""
     response = client.post("/login", data={
+        "csrf_token": login_csrf(),
         "user_contact": "farmer@example.com",
         "password": "harvest-secret-1",
         "password_confirm": "harvest-secret-1",
+        "auth_action": "register",
     })
     assert response.status_code == 200
     assert "Registration successful" in response.get_data(as_text=True)
 
     response = client.post("/login", data={
+        "csrf_token": login_csrf(),
         "user_contact": "farmer@example.com",
         "password": "harvest-secret-1",
     })
@@ -58,13 +61,16 @@ def test_login_without_password_rejected(client):
     assert "password" in response.get_data(as_text=True).lower()
 
 
-def test_login_wrong_password_generic_error(client):
+def test_login_wrong_password_generic_error(client, login_csrf):
     client.post("/login", data={
+        "csrf_token": login_csrf(),
         "user_contact": "exists@example.com",
         "password": "a-good-password-1",
         "password_confirm": "a-good-password-1",
+        "auth_action": "register",
     })
     response = client.post("/login", data={
+        "csrf_token": login_csrf(),
         "user_contact": "exists@example.com",
         "password": "wrong-password-9",
     })

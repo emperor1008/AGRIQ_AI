@@ -11,6 +11,24 @@
     var csrfMeta = document.querySelector('input[name="csrf_token"]');
     if (csrfMeta) CSRF = csrfMeta.value;
 
+    // Phase 7.1: the server revokes sessions (expiry, logout elsewhere, password
+    // reset), and answers 401 when that happened. Return to the login form once
+    // per page load instead of showing a misleading empty/error panel.
+    var redirectingToLogin = false;
+
+    function redirectToLogin() {
+        if (redirectingToLogin) return;
+        redirectingToLogin = true;
+        window.location.assign('/login');
+    }
+
+    function apiGet(url) {
+        return fetch(url, { credentials: 'same-origin' }).then(function (response) {
+            if (response.status === 401) redirectToLogin();
+            return response;
+        });
+    }
+
     function feedback(form, message, ok) {
         var el = form.querySelector('.form-feedback');
         if (!el) return;
@@ -25,6 +43,7 @@
         if (!isFormData) headers['Content-Type'] = 'application/json';
         fetch(url, options)
             .then(function (response) {
+                if (response.status === 401) redirectToLogin();
                 return response.json().then(function (payload) {
                     return { status: response.status, payload: payload };
                 });
@@ -48,7 +67,7 @@
     }
 
     function refreshContext() {
-        fetch('/api/farmer-context', { credentials: 'same-origin' })
+        apiGet('/api/farmer-context')
             .then(function (r) { return r.json(); })
             .then(function (payload) {
                 if (payload && payload.ok) {
@@ -112,7 +131,7 @@
     if (fieldForm) {
         fieldForm.addEventListener('submit', function (event) {
             event.preventDefault();
-            fetch('/api/farms', { credentials: 'same-origin' })
+            apiGet('/api/farms')
                 .then(function (r) { return r.json(); })
                 .then(function (payload) {
                     if (!payload.ok || !payload.farms || !payload.farms.length) {
@@ -142,7 +161,7 @@
         soilForm.addEventListener('submit', function (event) {
             event.preventDefault();
             // Resolve field id through the context endpoint.
-            fetch('/api/farmer-context', { credentials: 'same-origin' })
+            apiGet('/api/farmer-context')
                 .then(function (r) { return r.json(); })
                 .then(function (payload) {
                     var field = payload && payload.context && payload.context.field;
@@ -176,7 +195,7 @@
     if (cycleForm) {
         cycleForm.addEventListener('submit', function (event) {
             event.preventDefault();
-            fetch('/api/farmer-context', { credentials: 'same-origin' })
+            apiGet('/api/farmer-context')
                 .then(function (r) { return r.json(); })
                 .then(function (payload) {
                     var field = payload && payload.context && payload.context.field;
@@ -211,7 +230,7 @@
             var cycleId = stageForm.getAttribute('data-cycle-id');
             if (!cycleId) {
                 // Pull from context when not stamped server-side.
-                fetch('/api/farmer-context', { credentials: 'same-origin' })
+                apiGet('/api/farmer-context')
                     .then(function (r) { return r.json(); })
                     .then(function (payload) {
                         var cycle = payload && payload.context && payload.context.crop_cycle;
@@ -243,7 +262,7 @@
     if (observationForm) {
         observationForm.addEventListener('submit', function (event) {
             event.preventDefault();
-            fetch('/api/farmer-context', { credentials: 'same-origin' })
+            apiGet('/api/farmer-context')
                 .then(function (r) { return r.json(); })
                 .then(function (payload) {
                     var cycle = payload && payload.context && payload.context.crop_cycle;
@@ -274,7 +293,7 @@
     // Stamp the active cycle id for stage confirmation when known server-side.
     var activeCyclePanel = document.querySelector('[data-panel="cycle"]');
     if (activeCyclePanel && stageForm) {
-        fetch('/api/farmer-context', { credentials: 'same-origin' })
+        apiGet('/api/farmer-context')
             .then(function (r) { return r.json(); })
             .then(function (payload) {
                 var cycle = payload && payload.context && payload.context.crop_cycle;

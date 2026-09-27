@@ -34,7 +34,7 @@
     if (els.expertBtn) els.expertBtn.addEventListener("click", onExpertReview);
 
     // Probe capability once so farmers see an honest state before uploading.
-    AGRIQ.api.imageCapabilities().then(function (res) {
+    AgriqAPI.imageCapabilities().then(function (res) {
       if (res && res.ok && res.image_analysis_available === false) {
         setServiceStatus("Image analysis is not currently available.");
         els.file.disabled = true;
@@ -65,7 +65,7 @@
   function submit(file) {
     setServiceStatus("Checking your photo…");
     var crop = els.crop ? els.crop.value : "rice";
-    AGRIQ.api.analyseCropImage(file, crop).then(function (res) {
+    AgriqAPI.analyseCropImage(file, crop).then(function (res) {
       setServiceStatus("");
       if (!res || !res.ok) {
         showResult(res && res.error ? res.error : "AGRIQ could not analyse this photo. Please try again.", []);
@@ -140,7 +140,7 @@
     if (!id) return;
     var note = window.prompt("Tell AGRIQ briefly: was this result helpful? What did you see in the field?");
     if (!note) return;
-    AGRIQ.api.sendImageFeedback(id, note).then(function (res) {
+    AgriqAPI.sendImageFeedback(id, note).then(function (res) {
       if (res && res.ok) {
         if (els.feedbackBtn) { els.feedbackBtn.textContent = "Thank you — noted"; els.feedbackBtn.disabled = true; }
       }
@@ -150,7 +150,7 @@
   function onExpertReview() {
     var id = currentAnalysisId();
     if (!id) return;
-    AGRIQ.api.requestImageExpertReview(id).then(function (res) {
+    AgriqAPI.requestImageExpertReview(id).then(function (res) {
       if (res && res.ok) {
         if (els.expertBtn) { els.expertBtn.textContent = "Expert review requested"; els.expertBtn.disabled = true; }
       }

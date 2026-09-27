@@ -1,0 +1,43 @@
+{# One verified knowledge record card. Shared by the page and the JSON-driven
+   refresh, so the markup a browser sees is identical either way. #}
+<article class="knowledge-card glass-panel" data-kind="{{ entry.kind }}" data-slug="{{ entry.slug }}">
+    <header class="knowledge-card-head">
+        <span class="pill knowledge-category">{{ t(entry.category_label_key) }}</span>
+        <span class="pill knowledge-evidence" data-evidence="{{ entry.evidence_level }}">{{ entry.evidence_level }}</span>
+        {% if entry.freshness and entry.freshness.status != 'CURRENT' %}
+        <span class="pill knowledge-freshness" data-status="{{ entry.freshness.status }}">{{ t(entry.freshness.label_key) }}</span>
+        {% endif %}
+    </header>
+
+    <h3>
+        <a href="{{ entry.detail_url }}{% if language and language != 'en' %}?lang={{ language }}{% endif %}">{{ entry.title }}</a>
+    </h3>
+    {% if entry.common_name %}<p class="knowledge-subtitle">{{ entry.common_name }}</p>{% endif %}
+    {% if entry.summary %}<p>{{ entry.summary }}</p>{% endif %}
+
+    <dl class="knowledge-meta">
+        {% if entry.crops %}
+        <div><dt>{{ t('common.crops') }}</dt><dd>{{ entry.crops|join(', ') }}</dd></div>
+        {% endif %}
+        {% if entry.regions %}
+        <div><dt>{{ t('common.region') }}</dt><dd>{{ entry.regions|join(', ') }}</dd></div>
+        {% endif %}
+        {% if entry.source.organisation %}
+        <div><dt>{{ t('common.source_organisation') }}</dt><dd>{{ entry.source.organisation }}</dd></div>
+        {% endif %}
+        {% if entry.last_verified_at %}
+        <div><dt>{{ t('common.last_verified') }}</dt><dd>{{ entry.last_verified_at[:10] }}</dd></div>
+        {% endif %}
+    </dl>
+
+    {% if entry.kind == 'pesticide' %}
+    <p class="knowledge-warning" role="note">{{ t('pesticide.label_notice') }}</p>
+    {% endif %}
+
+    <div class="knowledge-card-actions">
+        <a class="link-button" href="{{ entry.detail_url }}{% if language and language != 'en' %}?lang={{ language }}{% endif %}">{{ t('common.view_details') }}</a>
+        {% if entry.source.url %}
+        <a class="link-button" href="{{ entry.source.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ t('common.source') }}</a>
+        {% endif %}
+    </div>
+</article>

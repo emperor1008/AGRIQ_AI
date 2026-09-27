@@ -1,0 +1,34 @@
+{# Results region: verified cards, pagination, or the canonical honest state.
+   Rendered server-first and re-rendered by farming-techniques.js after a
+   search/filter change, so both paths share one markup definition. #}
+<div id="knowledgeResults" data-status="{{ listing.status }}" data-count="{{ listing.count }}"
+     data-page="{{ listing.page }}" data-pages="{{ listing.pages }}">
+
+    {% if listing.status != 'OK' or not listing.entries %}
+    <div class="empty-state glass-panel knowledge-empty" role="status">
+        <span class="section-kicker">{{ t('common.data_unavailable') if listing.status == 'DATA_UNAVAILABLE' else t('common.results') }}</span>
+        <h2>{{ listing.reason }}</h2>
+        {% if listing.hint %}<p>{{ listing.hint }}</p>{% endif %}
+        {% if listing.awaiting_review %}
+        <p class="knowledge-awaiting">{{ t('knowledge.awaiting_review', count=listing.awaiting_review) }}</p>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="knowledge-grid">
+        {% for entry in listing.entries %}
+        {% include "knowledge/_card.html" %}
+        {% endfor %}
+    </div>
+
+    <nav class="knowledge-pagination" aria-label="{{ t('common.results') }}">
+        <span class="knowledge-count">{{ t('common.result_count', count=listing.count) }}</span>
+        {% if listing.has_previous %}
+        <a class="ghost-btn" href="{{ url_for('knowledge.index_page', page=listing.page - 1, category=listing.filters.category, q=listing.filters.q, crop=listing.filters.crop, region=listing.filters.region, evidence=listing.filters.evidence, lang=language if language != 'en' else None) }}">{{ t('common.previous') }}</a>
+        {% endif %}
+        <span class="knowledge-page">{{ t('common.page') }} {{ listing.page }} / {{ listing.pages }}</span>
+        {% if listing.has_next %}
+        <a class="ghost-btn" href="{{ url_for('knowledge.index_page', page=listing.page + 1, category=listing.filters.category, q=listing.filters.q, crop=listing.filters.crop, region=listing.filters.region, evidence=listing.filters.evidence, lang=language if language != 'en' else None) }}">{{ t('common.next') }}</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+</div>

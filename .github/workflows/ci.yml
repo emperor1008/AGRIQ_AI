@@ -59,6 +59,16 @@ jobs:
         env:
           AGRIQ_SECRET_KEY: ci-test-secret-not-for-production
 
+      - name: Authentication smoke test (real sign-in journey on a throwaway DB)
+        run: python scripts/check_auth_flow.py
+        env:
+          AGRIQ_SECRET_KEY: ci-test-secret-not-for-production
+
+      - name: Knowledge safety probe (real dataset, real routes, throwaway DB)
+        run: python scripts/check_knowledge_safety.py
+        env:
+          AGRIQ_SECRET_KEY: ci-test-secret-not-for-production
+
       - name: Migration test (real Alembic chain)
         run: |
           cd apps/api

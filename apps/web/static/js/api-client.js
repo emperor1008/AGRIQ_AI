@@ -11,8 +11,33 @@
     return meta ? meta.getAttribute("content") : "";
   }
 
+  // Phase 7.1: a 401 means the server-side session is gone (expired, revoked by
+  // logout on another device, or invalidated by a password reset). The server is
+  // the only authority here, so the page returns to the login form. The flag
+  // makes this happen at most once per page load, so a stale tab cannot bounce
+  // between the dashboard and the login page forever.
+  var redirectingToLogin = false;
+
+  function handleAuthFailure(response) {
+    if (response.status !== 401) return false;
+    if (!redirectingToLogin) {
+      redirectingToLogin = true;
+      if (typeof global.location.assign === "function") {
+        global.location.assign("/login");
+      }
+    }
+    return true;
+  }
+
+  /** fetch() plus session-expiry handling; never hides the server's own error. */
+  async function apiFetch(url, options) {
+    var response = await global.fetch(url, options);
+    handleAuthFailure(response);
+    return response;
+  }
+
   async function askAI(question, context) {
-    var response = await fetch("/ask-ai", {
+    var response = await apiFetch("/ask-ai", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -27,7 +52,7 @@
 
   async function fetchLiveWeather(params) {
     var query = new URLSearchParams(params);
-    var response = await fetch("/api/live-weather?" + query.toString());
+    var response = await apiFetch("/api/live-weather?" + query.toString());
     if (!response.ok) throw new Error("Weather unavailable");
     return response.json();
   }
@@ -35,7 +60,7 @@
   /** Phase 2: one Farm Copilot turn (versioned API). */
   async function copilotMessage(payload, compact) {
     var url = "/api/v1/copilot/messages" + (compact ? "?response_mode=compact" : "");
-    var response = await fetch(url, {
+    var response = await apiFetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify(payload),
@@ -47,7 +72,7 @@
 
   /** Phase 2: feedback/outcome on a recommendation. */
   async function recommendationFeedback(recommendationId, payload) {
-    var response = await fetch("/api/v1/recommendations/" + recommendationId + "/feedback", {
+    var response = await apiFetch("/api/v1/recommendations/" + recommendationId + "/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify(payload),
@@ -59,7 +84,7 @@
 
   /** Phase 2: farmer context for the copilot panel chips. */
   async function farmerContext() {
-    var response = await fetch("/api/farmer-context");
+    var response = await apiFetch("/api/farmer-context");
     if (!response.ok) throw new Error("Context unavailable");
     return response.json();
   }
@@ -67,19 +92,19 @@
   // --- Phase 3: voice endpoints -------------------------------------------
 
   async function voiceCapabilities() {
-    var response = await fetch("/api/v1/voice/capabilities");
+    var response = await apiFetch("/api/v1/voice/capabilities");
     if (!response.ok) throw new Error("Capabilities unavailable");
     return response.json();
   }
 
   async function voiceConsentStatus() {
-    var response = await fetch("/api/v1/voice/consent");
+    var response = await apiFetch("/api/v1/voice/consent");
     if (!response.ok) throw new Error("Consent status unavailable");
     return response.json();
   }
 
   async function voiceGiveConsent(payload) {
-    var response = await fetch("/api/v1/voice/consent", {
+    var response = await apiFetch("/api/v1/voice/consent", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify(payload),
@@ -90,7 +115,7 @@
   }
 
   async function voiceStartSession(language, fieldId, cropCycleId, retainAudio) {
-    var response = await fetch("/api/v1/voice/sessions", {
+    var response = await apiFetch("/api/v1/voice/sessions", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify({
@@ -108,21 +133,21 @@
     var form = new FormData();
     form.append("audio", blob, "recording.webm");
     form.append("csrf_token", csrfToken());
-    var upload = await fetch("/api/v1/voice/sessions/" + session.session.session_id + "/audio", {
+    var upload = await apiFetch("/api/v1/voice/sessions/" + session.session.session_id + "/audio", {
       method: "POST",
       headers: { "X-CSRF-Token": csrfToken() },
       body: form,
     });
     var uploadData = await upload.json();
     if (!upload.ok) throw new Error(uploadData.error || "Upload failed");
-    var transcription = await fetch("/api/v1/voice/sessions/" + session.session.session_id + "/transcription");
+    var transcription = await apiFetch("/api/v1/voice/sessions/" + session.session.session_id + "/transcription");
     var transcriptData = await transcription.json();
     if (!transcriptData.session) transcriptData.session = session.session;
     return transcriptData;
   }
 
   async function voiceConfirmTranscript(sessionId, confirmedText, language) {
-    var response = await fetch("/api/v1/voice/sessions/" + sessionId + "/confirm", {
+    var response = await apiFetch("/api/v1/voice/sessions/" + sessionId + "/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify({ confirmed_transcript: confirmedText, language: language }),
@@ -133,7 +158,7 @@
   }
 
   async function voiceAskCopilot(sessionId) {
-    var response = await fetch("/api/v1/voice/sessions/" + sessionId + "/ask", {
+    var response = await apiFetch("/api/v1/voice/sessions/" + sessionId + "/ask", {
       method: "POST",
       headers: { "X-CSRF-Token": csrfToken() },
     });
@@ -143,7 +168,7 @@
   }
 
   async function voiceSynthesise(messageId, language) {
-    var response = await fetch("/api/v1/voice/synthesise", {
+    var response = await apiFetch("/api/v1/voice/synthesise", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify({ message_id: messageId, language: language }),
@@ -154,7 +179,7 @@
   }
 
   async function voiceDeleteRecording(sessionId) {
-    var response = await fetch("/api/v1/voice/sessions/" + sessionId + "/audio", {
+    var response = await apiFetch("/api/v1/voice/sessions/" + sessionId + "/audio", {
       method: "DELETE",
       headers: { "X-CSRF-Token": csrfToken() },
     });
@@ -164,7 +189,7 @@
   // --- Phase 4: crop-image endpoints ---------------------------------------
 
   async function imageCapabilities() {
-    var response = await fetch("/api/v1/crop-images/capabilities");
+    var response = await apiFetch("/api/v1/crop-images/capabilities");
     if (!response.ok) throw new Error("Image capabilities unavailable");
     return response.json();
   }
@@ -174,7 +199,7 @@
     form.append("image", file, file.name || "leaf.jpg");
     form.append("crop", crop || "rice");
     form.append("csrf_token", csrfToken());
-    var response = await fetch("/api/v1/crop-images/analyse", {
+    var response = await apiFetch("/api/v1/crop-images/analyse", {
       method: "POST",
       body: form,
     });
@@ -187,7 +212,7 @@
   }
 
   async function sendImageFeedback(analysisId, farmerFeedback) {
-    var response = await fetch("/api/v1/crop-images/analyses/" + analysisId + "/feedback", {
+    var response = await apiFetch("/api/v1/crop-images/analyses/" + analysisId + "/feedback", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify({ farmer_feedback: farmerFeedback }),
@@ -198,7 +223,7 @@
   }
 
   async function requestImageExpertReview(analysisId) {
-    var response = await fetch("/api/v1/crop-images/analyses/" + analysisId + "/request-expert-review", {
+    var response = await apiFetch("/api/v1/crop-images/analyses/" + analysisId + "/request-expert-review", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify({}),
@@ -210,7 +235,7 @@
 
   /** Phase 5: run the risk engine for one field (idempotent server-side). */
   async function analyzeFieldRisk(fieldId, options) {
-    var response = await fetch("/api/v1/risk/fields/" + fieldId + "/analyze", {
+    var response = await apiFetch("/api/v1/risk/fields/" + fieldId + "/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify(options || {}),
@@ -222,7 +247,7 @@
 
   /** Phase 5: latest persisted run for a field. */
   async function currentFieldRisk(fieldId) {
-    var response = await fetch("/api/v1/risk/fields/" + fieldId + "/current");
+    var response = await apiFetch("/api/v1/risk/fields/" + fieldId + "/current");
     var data = await response.json();
     if (!response.ok) throw new Error(data.error || "No stored analysis");
     return data;
@@ -230,7 +255,7 @@
 
   /** Phase 5: record the farmer's action on a risk assessment. */
   async function riskAction(riskId, payload) {
-    var response = await fetch("/api/v1/risk/assessments/" + riskId + "/action", {
+    var response = await apiFetch("/api/v1/risk/assessments/" + riskId + "/action", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify(payload),
@@ -253,7 +278,7 @@
 
   /** Phase 6: official prices, trend, volatility and market comparison. */
   async function marketOverview(params) {
-    var response = await fetch("/api/v1/market/overview?" + marketQuery(params));
+    var response = await apiFetch("/api/v1/market/overview?" + marketQuery(params));
     var data = await response.json();
     if (!response.ok) throw new Error(data.message || data.error || "Market data unavailable");
     return data;
@@ -261,7 +286,7 @@
 
   /** Phase 6: provenance, freshness and quality report. */
   async function marketEvidence(params) {
-    var response = await fetch("/api/v1/market/evidence?" + marketQuery(params));
+    var response = await apiFetch("/api/v1/market/evidence?" + marketQuery(params));
     var data = await response.json();
     if (!response.ok) throw new Error(data.message || data.error || "Market evidence unavailable");
     return data;
@@ -269,7 +294,7 @@
 
   /** Phase 6: sell/hold decision support (CSRF-protected). */
   async function marketSellHold(payload) {
-    var response = await fetch("/api/v1/market/sell-hold", {
+    var response = await apiFetch("/api/v1/market/sell-hold", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify(payload || {}),
@@ -281,7 +306,7 @@
 
   /** Phase 6: crop-choice options (CSRF-protected). */
   async function marketCropOptions(payload) {
-    var response = await fetch("/api/v1/market/crop-options", {
+    var response = await apiFetch("/api/v1/market/crop-options", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify(payload || {}),
@@ -293,7 +318,7 @@
 
   /** Phase 6: market comparison with cost completeness (CSRF-protected). */
   async function marketLogistics(payload) {
-    var response = await fetch("/api/v1/market/logistics", {
+    var response = await apiFetch("/api/v1/market/logistics", {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken() },
       body: JSON.stringify(payload || {}),
@@ -304,6 +329,7 @@
   }
 
   global.AgriqAPI = {
+    apiFetch: apiFetch,
     askAI: askAI,
     fetchLiveWeather: fetchLiveWeather,
     copilotMessage: copilotMessage,

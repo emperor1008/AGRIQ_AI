@@ -126,8 +126,34 @@ def profile_for(district: str) -> Mapping[str, str]:
 
 
 def coordinates_for(district: str) -> tuple[float, float]:
-    """Return (lat, lon) for a district, defaulting to Cuttack."""
+    """Return (lat, lon) for a district, defaulting to Cuttack.
+
+    Kept for internal callers that intentionally want a map default. Anything
+    answering for a *named place* must use :func:`coordinates_for_exact`, so an
+    unrecognised name cannot silently become Cuttack (Phase 7.3).
+    """
     return DISTRICTS.get(district, DISTRICTS["Cuttack"])
+
+
+def coordinates_for_exact(district: str | None) -> tuple[float, float] | None:
+    """Return (lat, lon) for a KNOWN district, else ``None``.
+
+    Case- and whitespace-tolerant, but never substitutes another district: an
+    agricultural answer given for the wrong place is worse than an explicit
+    invalid-location state. Alternate spellings that are not in this curated
+    catalogue return ``None`` (the caller reports ``INVALID_LOCATION``) rather
+    than being guessed.
+    """
+    if not district:
+        return None
+    name = str(district).strip()
+    if name in DISTRICTS:
+        return DISTRICTS[name]
+    lowered = name.casefold()
+    for known, coordinates in DISTRICTS.items():
+        if known.casefold() == lowered:
+            return coordinates
+    return None
 
 
 __all__ = [
@@ -139,4 +165,5 @@ __all__ = [
     "WESTERN_DISTRICTS",
     "profile_for",
     "coordinates_for",
+    "coordinates_for_exact",
 ]

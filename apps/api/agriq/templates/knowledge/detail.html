@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% from "components/_macros.html" import language_switcher with context %}
+
+{% block content %}
+<div class="app-shell knowledge-shell">
+    <aside class="side-rail {% if user_mode == 'student' %}student-rail{% else %}farmer-rail{% endif %} knowledge-rail">
+        <div class="rail-logo">{% if user_mode == "student" %}🎓{% else %}🌾{% endif %}</div>
+        <a href="/dashboard" title="{{ t('common.dashboard') }}">🏠</a>
+        <a href="{{ url_for('knowledge.index_page', lang=language if language != 'en' else None) }}" title="{{ t('knowledge.title') }}">📖</a>
+        <a href="#knowledgeSources" title="{{ t('knowledge.sources_heading') }}">📑</a>
+        <a href="/logout" title="{{ t('common.logout') }}">⏻</a>
+    </aside>
+
+    <main class="main-stage">
+        <header class="topbar">
+            <div>
+                <div class="brand AGRIQ-glow">🌾 AGRIQ AI</div>
+                <div class="brand-sub">{{ t('knowledge.section_kicker') }}</div>
+            </div>
+            <div class="top-actions">
+                <div class="pill">{{ engine_mode }}</div>
+                {{ language_switcher() }}
+                <a class="logout" href="{{ url_for('knowledge.index_page', lang=language if language != 'en' else None) }}">{{ t('knowledge.title') }}</a>
+            </div>
+        </header>
+
+        {% if not detail %}
+        <section class="report-area">
+            <div class="empty-state glass-panel knowledge-empty" role="status">
+                <span class="section-kicker">{{ t('common.not_found') }}</span>
+                <h2>{{ t('knowledge.no_results') }}</h2>
+                <p>{{ t('knowledge.no_results_hint') }}</p>
+                <a class="ghost-btn" href="{{ url_for('knowledge.index_page', lang=language if language != 'en' else None) }}">{{ t('knowledge.title') }}</a>
+            </div>
+        </section>
+        {% elif detail.status != 'OK' %}
+        <section class="report-area">
+            <div class="empty-state glass-panel knowledge-empty" role="status">
+                <span class="section-kicker">{{ t('common.data_unavailable') }}</span>
+                <h2>{{ detail.reason }}</h2>
+                <p>{{ t('knowledge.freshness_expired') }}</p>
+                <a class="ghost-btn" href="{{ url_for('knowledge.index_page', lang=language if language != 'en' else None) }}">{{ t('knowledge.title') }}</a>
+            </div>
+        </section>
+        {% else %}
+        <section class="report-area knowledge-detail" data-kind="{{ detail.kind }}" data-slug="{{ detail.entry.slug }}">
+            <div class="section-heading">
+                <span class="section-kicker">{{ t('knowledge.detail_kicker') }} • {{ t(detail.entry.category_label_key) }}</span>
+                <h1>{{ detail.entry.title }}</h1>
+                {% if detail.entry.common_name %}<p class="knowledge-subtitle">{{ detail.entry.common_name }}</p>{% endif %}
+                {% if detail.entry.summary %}<p>{{ detail.entry.summary }}</p>{% endif %}
+            </div>
+
+            <ul class="knowledge-chip-row" aria-label="{{ t('knowledge.evidence_heading') }}">
+                <li class="pill">{{ t('knowledge.evidence_heading') }}: {{ detail.entry.evidence_level }}</li>
+                {% if detail.entry.region_scope %}<li class="pill">{{ t('common.region') }}: {{ detail.entry.region_scope }}</li>{% endif %}
+                {% if detail.entry.crops %}<li class="pill">{{ t('common.crops') }}: {{ detail.entry.crops|join(', ') }}</li>{% endif %}
+                <li class="pill">{{ t('common.review_status') }}: {{ detail.entry.review_status }}</li>
+                {% if detail.entry.last_verified_at %}<li class="pill">{{ t('common.last_verified') }}: {{ detail.entry.last_verified_at[:10] }}</li>{% endif %}
+                <li class="pill">{{ t('knowledge.freshness_heading') }}: {{ t(detail.freshness.label_key) }}</li>
+            </ul>
+
+            {% if detail.historical %}
+            <p class="knowledge-warning" role="note">
+                {{ t('student.evidence_note') }}
+            </p>
+            {% endif %}
+            {% for notice in detail.notices %}
+            <p class="knowledge-note" role="note">{{ t(notice) }}</p>
+            {% endfor %}
+            {% if detail.translation and detail.translation.notice_key %}
+            <p class="knowledge-warning" role="note">{{ t(detail.translation.notice_key) }}</p>
+            {% endif %}
+            {% if detail.translation and detail.translation.ui_notice_key %}
+            <p class="knowledge-note" role="note">{{ t(detail.translation.ui_notice_key) }}</p>
+            {% endif %}
+            {% if detail.entry.region_scope and detail.entry.region_scope not in ('Global',) %}
+            <p class="knowledge-note" role="note">{{ t('knowledge.region_notice') }}</p>
+            {% endif %}
+
+            {% if detail.kind == 'pesticide' %}
+            <section class="glass-panel knowledge-safety" aria-labelledby="pesticideSafetyHeading">
+                <h2 id="pesticideSafetyHeading">{{ t('pesticide.section_title') }}</h2>
+                <p class="knowledge-warning" role="note">{{ t('pesticide.label_notice') }}</p>
+                <p class="knowledge-note" role="note">{{ t('pesticide.manufacturing_refusal') }}</p>
+                {% if not detail.application.verified %}
+                <p class="knowledge-warning" role="note">
+                    <strong>{{ detail.application.status }}</strong> — {{ t(detail.application.note_key) }}
+                </p>
+                {% endif %}
+            </section>
+
+            <section class="data-panel" aria-labelledby="pesticideFieldsHeading">
+                <h2 id="pesticideFieldsHeading">{{ t('knowledge.results_heading') }}</h2>
+                <div class="scroll-table">
+                    <table class="mini-table">
+                        <caption class="sr-only">{{ detail.entry.title }}</caption>
+                        <tbody>
+                        {% for field in detail.fields %}
+                        <tr>
+                            <th scope="row">{{ t(field.label_key) }}</th>
+                            <td>
+                                {{ field.text }}
+                                {% if field.translation %}
+                                <br><small>{{ field.translation }}</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            {% if detail.targets %}
+            <section class="data-panel" aria-labelledby="pesticideTargetsHeading">
+                <h2 id="pesticideTargetsHeading">{{ t('pesticide.targets') }}</h2>
+                <div class="scroll-table">
+                    <table class="mini-table">
+                        <thead><tr><th scope="col">{{ t('common.crops') }}</th><th scope="col">{{ t('pesticide.targets') }}</th></tr></thead>
+                        <tbody>
+                        {% for target in detail.targets %}
+                        <tr><td>{{ target.crop }}</td><td>{{ target.target }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            {% endif %}
+            {% else %}
+
+            <section class="dropdown-stack" aria-label="{{ detail.entry.title }}">
+                {% for section in detail.sections %}
+                <details class="dropdown-card" {% if loop.first %}open{% endif %}>
+                    <summary><span>{{ t(section.label_key) }}</span><small>{{ detail.entry.evidence_level }}</small></summary>
+                    <div class="dropdown-content">
+                        {# A reviewed translation is preferred for ordinary text;
+                           safety-critical text keeps the source-language original
+                           visible underneath (never replaced). #}
+                        <p>{{ section.translation if (section.translation and not section.high_risk) else section.text }}</p>
+                        {% if section.high_risk and section.translation %}
+                        <p class="knowledge-translation" lang="{{ language_meta.html_lang }}"><small>{{ section.translation }}</small></p>
+                        {% endif %}
+                        {% if section.translation and not section.high_risk %}
+                        <p class="knowledge-translation"><small>{{ t('knowledge.sources_heading') }} — {{ section.source_language }}</small></p>
+                        {% endif %}
+                    </div>
+                </details>
+                {% endfor %}
+                {% for item in detail.shared %}
+                <details class="dropdown-card">
+                    <summary><span>{{ t(item.label_key) }}</span></summary>
+                    <div class="dropdown-content"><p>{{ item.text }}</p></div>
+                </details>
+                {% endfor %}
+                {% for item in detail.study %}
+                <details class="dropdown-card">
+                    <summary><span>{{ t(item.label_key) }}</span></summary>
+                    <div class="dropdown-content"><p>{{ item.text }}</p></div>
+                </details>
+                {% endfor %}
+            </section>
+
+            <section class="data-panel knowledge-states" aria-labelledby="knowledgeStatesHeading">
+                <h2 id="knowledgeStatesHeading">{{ t('common.safety') }}</h2>
+                <ul>
+                    <li>
+                        <strong>{{ detail.preparation.status }}</strong>
+                        {% if detail.preparation.documented %}{{ t('common.verified') }}
+                        {% else %} — {{ detail.preparation.state_message }}{% endif %}
+                    </li>
+                    <li>
+                        <strong>{{ detail.application.status }}</strong>
+                        {% if detail.application.verified %}{{ t('common.verified') }}
+                        {% else %} — {{ detail.application.state_message }}{% endif %}
+                    </li>
+                </ul>
+                {% if detail.preparation.instructions %}
+                <h3>{{ t('knowledge.preparation_heading') }}</h3>
+                <p>{{ detail.preparation.instructions }}</p>
+                {% endif %}
+                {% if detail.entry.region_notes %}
+                <ul>{% for note in detail.entry.region_notes %}<li>{{ note }}</li>{% endfor %}</ul>
+                {% endif %}
+            </section>
+            {% endif %}
+
+            <section class="data-panel" id="knowledgeEvidence" aria-labelledby="knowledgeEvidenceHeading">
+                <h2 id="knowledgeEvidenceHeading">{{ t('knowledge.evidence_heading') }}</h2>
+                {% if detail.evidence %}
+                <div class="scroll-table">
+                    <table class="mini-table">
+                        <thead><tr>
+                            <th scope="col">{{ t('common.evidence_level') }}</th>
+                            <th scope="col">{{ t('common.results') }}</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for item in detail.evidence %}
+                        <tr>
+                            <td>{{ item.evidence_level }}</td>
+                            <td>{{ item.claim }}{% if item.source_section %}<br><small>{{ item.source_section }}</small>{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="knowledge-note">{{ t('common.insufficient_real_data') }}</p>
+                {% endif %}
+            </section>
+
+            <section class="data-panel" id="knowledgeSources" aria-labelledby="knowledgeSourcesHeading">
+                <h2 id="knowledgeSourcesHeading">{{ t('knowledge.sources_heading') }}</h2>
+                {% for source in detail.sources %}
+                <article class="knowledge-source">
+                    <h3>{{ source.title }}</h3>
+                    <dl class="knowledge-meta">
+                        <div><dt>{{ t('common.source_organisation') }}</dt><dd>{{ source.organisation }}</dd></div>
+                        {% if source.source_type %}<div><dt>{{ t('common.category') }}</dt><dd>{{ source.source_type }}</dd></div>{% endif %}
+                        {% if source.publication_date %}<div><dt>{{ t('common.publication_date') }}</dt><dd>{{ source.publication_date }}</dd></div>{% endif %}
+                        {% if source.accessed_at %}<div><dt>{{ t('common.accessed_on') }}</dt><dd>{{ source.accessed_at[:10] }}</dd></div>{% endif %}
+                        {% if source.last_verified_at %}<div><dt>{{ t('common.last_verified') }}</dt><dd>{{ source.last_verified_at[:10] }}</dd></div>{% endif %}
+                        {% if source.licence_note %}<div><dt>{{ t('common.source') }}</dt><dd>{{ source.licence_note }}</dd></div>{% endif %}
+                    </dl>
+                    {% if source.url %}
+                    <a class="link-button" href="{{ source.url }}" rel="noopener noreferrer nofollow" target="_blank">{{ t('common.source_url') }}</a>
+                    {% endif %}
+                </article>
+                {% endfor %}
+                <p class="knowledge-note">
+                    {{ t('knowledge.freshness_heading') }}: {{ t(detail.freshness.label_key) }}
+                    {% if detail.freshness.review_due_at %} • {{ t('common.review_due') }} {{ detail.freshness.review_due_at[:10] }}{% endif %}
+                </p>
+                {% if detail.entry.reviewed_by %}
+                <p class="knowledge-note">{{ t('common.review_status') }}: {{ detail.entry.review_status }} — {{ detail.entry.reviewed_by }}</p>
+                {% endif %}
+            </section>
+        </section>
+        {% endif %}
+
+        {% if ui_translation_status == 'TRANSLATION_PENDING_REVIEW' or (detail and detail.translation and detail.translation.notice_key) %}
+        <p class="knowledge-draft-notice" role="note">{{ t('language_notice.draft') }}</p>
+        {% endif %}
+    </main>
+</div>
+{% endblock %}

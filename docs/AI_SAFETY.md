@@ -1,7 +1,31 @@
-# AI Safety (Phase 2)
+# AI Safety (Phase 2, extended in Phase 7.2)
 
 AGRIQ's safety rules are deterministic code, evaluated **before** any LLM
 call. The model can add explanation but can never weaken or bypass them.
+
+## Agricultural knowledge answers (Phase 7.2)
+
+`services/knowledge_safety.py` adds a second, independent guard in front of the
+knowledge base, and `domain/safety/chemical_rules.py` recognises the same
+manufacturability intent in the pre-existing pipeline:
+
+| Intent | Detection | Response |
+|---|---|---|
+| How to make/synthesise/formulate a pesticide | `KNOWLEDGE_MANUFACTURING_REFUSED` patterns in English, Hindi and Odia | `KNOWLEDGE_MANUFACTURING_REFUSED` — refusal, no steps, no quantities, safe-use information offered instead |
+| A preparation recipe | recipe/home-made/natural-spray patterns | `PREPARATION_DATA_UNAVAILABLE` unless a reviewed source documents that exact preparation |
+| An application rate, dilution or interval | dosage/how-much/how-often patterns | `APPLICATION_DATA_UNVERIFIED` unless a current authority states it for that record |
+
+Grounding rule: the knowledge answer path retrieves **only** review-verified records
+whose provenance row is approved, and returns the passages with their sources. It
+does not call a language model, so there is nothing to hallucinate with. If nothing
+verified matches, the answer is the named unavailable state explained in the reader's
+language. A dose is never inferred from another record, crop or active ingredient, and
+modern pesticide records always carry the label notice plus the manufacturing refusal
+(see [knowledge-architecture.md](knowledge-architecture.md) §6).
+
+The end-to-end behaviour is verified by `scripts/check_knowledge_safety.py`
+(65 checks: manufacturing, recipe, dosage, invented-source and unverified-leak probes
+in three languages).
 
 ## Hard prohibitions (enforced in `domain/safety/chemical_rules.py`)
 

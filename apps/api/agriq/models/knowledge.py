@@ -51,6 +51,19 @@ class KnowledgeSource(db.Model):
     reviewed_at = db.Column(db.DateTime(timezone=True), nullable=True)
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, nullable=False)
 
+    # --- Phase 7.2 provenance extensions (additive, nullable) --------------
+    # ``knowledge_sources`` is the single provenance table for the whole
+    # application, so the Farming Techniques knowledge base reuses it rather
+    # than introducing a duplicate source table. These four columns carry the
+    # fields §20 requires for the newer records:
+    # ``source_type`` (GOVERNMENT / RESEARCH_INSTITUTE / …), ``accessed_at``
+    # (when the reviewer actually retrieved it), ``last_verified_at`` and
+    # ``review_due_at`` (per-category freshness).
+    source_type = db.Column(db.String(40), nullable=True, index=True)
+    accessed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    last_verified_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    review_due_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
     chunks = db.relationship("KnowledgeChunk", back_populates="source", lazy="dynamic",
                              cascade="all, delete-orphan")
 

@@ -67,13 +67,16 @@ def second_onboarded_farmer(second_farmer_client):
 # ---------------------------------------------------------------------------
 
 def test_analyze_requires_authentication(client):
+    """Phase 7.1: unauthenticated is 401 (not 404) so the client can re-auth."""
     response = client.post("/api/v1/risk/fields/1/analyze", json={})
-    assert response.status_code == 404
+    assert response.status_code == 401
+    assert response.get_json()["code"] == "AUTH_UNAUTHORIZED"
 
 
 def test_current_requires_authentication(client):
     response = client.get("/api/v1/risk/fields/1/current")
-    assert response.status_code == 404
+    assert response.status_code == 401
+    assert response.get_json()["code"] == "AUTH_UNAUTHORIZED"
 
 
 def test_foreign_field_is_404_not_403(onboarded_farmer, second_onboarded_farmer):

@@ -5,38 +5,79 @@
         <div class="brand-mark">🌾</div>
         <div class="login-logo AGRIQ-glow">AGRIQ AI</div>
         <p class="subtitle">Geospatial crop risk, productivity and farmer advisory intelligence.</p>
-        {% if error %}<p class="subtitle" style="color:#991b1b">{{ error }}</p>{% endif %}
-        {% if success %}<p class="subtitle" style="color:#166534">{{ success }}</p>{% endif %}
+        {% if error %}
+        <p class="subtitle" style="color:#991b1b" role="alert" data-error-code="{{ error_code or '' }}">{{ error }}</p>
+        {% endif %}
+        {% if success %}
+        <p class="subtitle" style="color:#166534" role="status">{{ success }}</p>
+        {% endif %}
         <form method="POST" action="/login">
             <input type="hidden" name="csrf_token" value="{{ csrf_token or '' }}">
-            <label>Email or Phone Number</label>
-            <input type="text" name="user_contact" placeholder="Enter email or phone number" required>
-            <label>Password</label>
-            <input type="password" name="password" placeholder="Enter your password" minlength="8" required>
-            <div id="register-fields" style="display:none">
-                <label>Confirm Password</label>
-                <input type="password" name="password_confirm" placeholder="Repeat the password" minlength="8">
+            {# Explicit intent: registration is never inferred from a stray field. #}
+            <input type="hidden" name="auth_action" id="auth-action" value="{{ 'register' if register_mode else 'login' }}">
+            <label for="user-contact">Email or Phone Number</label>
+            <input type="text" id="user-contact" name="user_contact" placeholder="Enter email or phone number"
+                   value="{{ user_contact or '' }}" required autocomplete="username" inputmode="email">
+            <label for="user-password">Password</label>
+            <input type="password" id="user-password" name="password" placeholder="Enter your password"
+                   minlength="8" required autocomplete="{{ 'new-password' if register_mode else 'current-password' }}">
+            <p class="subtitle" style="margin:6px 0 0">
+                <button type="button" id="toggle-password" class="link-button" aria-pressed="false">Show password</button>
+            </p>
+            <div id="register-fields" style="display:{{ 'block' if register_mode else 'none' }}">
+                <label for="user-password-confirm">Confirm Password</label>
+                <input type="password" id="user-password-confirm" name="password_confirm"
+                       placeholder="Repeat the password" minlength="8" autocomplete="new-password"
+                       {% if register_mode %}required{% endif %}>
             </div>
-            <button type="submit" id="login-submit">Sign In Securely</button>
+            <button type="submit" id="login-submit">{{ 'Create Account' if register_mode else 'Sign In Securely' }}</button>
         </form>
         <p class="subtitle" style="margin-top:10px">
-            <button type="button" id="toggle-register" class="link-button">New to AGRIQ AI? Create an account</button>
+            <a class="link-button" id="toggle-register"
+               href="{{ '/' if register_mode else '/login?mode=register' }}"
+               data-login-href="/" data-register-href="/login?mode=register">
+                {{ 'Already registered? Sign in' if register_mode else 'New to AGRIQ AI? Create an account' }}
+            </a>
+        </p>
+        <p class="subtitle" style="margin-top:6px">
+            <a class="link-button" href="/forgot-password">Forgot password?</a>
         </p>
     </div>
 </div>
 <script>
     (function () {
+        // Progressive enhancement only: every control here is a real link or a
+        // real form field, so the page works with JavaScript disabled.
+        var togglePassword = document.getElementById('toggle-password');
+        var password = document.getElementById('user-password');
+        if (togglePassword && password) {
+            togglePassword.addEventListener('click', function () {
+                var hidden = password.type === 'password';
+                password.type = hidden ? 'text' : 'password';
+                togglePassword.textContent = hidden ? 'Hide password' : 'Show password';
+                togglePassword.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+            });
+        }
+
         var toggle = document.getElementById('toggle-register');
         var extra = document.getElementById('register-fields');
         var submit = document.getElementById('login-submit');
-        var confirmInput = extra.querySelector('input');
-        if (!toggle || !extra) return;
-        toggle.addEventListener('click', function () {
-            var showing = extra.style.display !== 'none';
-            extra.style.display = showing ? 'none' : 'block';
-            confirmInput.required = !showing;
-            submit.textContent = showing ? 'Sign In Securely' : 'Create Account & Sign In';
-            toggle.textContent = showing ? 'New to AGRIQ AI? Create an account' : 'Already registered? Sign in';
+        var action = document.getElementById('auth-action');
+        var confirmInput = document.getElementById('user-password-confirm');
+        if (!toggle || !extra || !submit || !action || !confirmInput) return;
+
+        function applyMode(registering) {
+            extra.style.display = registering ? 'block' : 'none';
+            confirmInput.required = registering;
+            action.value = registering ? 'register' : 'login';
+            submit.textContent = registering ? 'Create Account' : 'Sign In Securely';
+            toggle.textContent = registering ? 'Already registered? Sign in' : 'New to AGRIQ AI? Create an account';
+            toggle.setAttribute('href', registering ? toggle.dataset.loginHref : toggle.dataset.registerHref);
+        }
+
+        toggle.addEventListener('click', function (event) {
+            event.preventDefault();
+            applyMode(extra.style.display === 'none');
         });
     })();
 </script>

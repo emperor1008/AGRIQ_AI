@@ -19,7 +19,7 @@ from ..core.audit import audit_event
 from ..core.config import get_config
 from ..core.exceptions import NotFoundError, ValidationError
 from ..core.logging import get_logger
-from ..core.security import current_user, require_csrf
+from ..core.security import get_current_user, require_csrf
 from ..repositories.copilot_repository import ConversationRepository
 from ..schemas.copilot import parse_copilot_message, parse_feedback_payload
 from ..services import copilot_orchestrator, feedback_service
@@ -34,10 +34,14 @@ copilot_bp = Blueprint("copilot", __name__)
 
 
 def _require_active_user():
-    user = current_user()
-    if user is None or not user.is_active:
-        raise NotFoundError("Sign in to continue.")
-    return user
+    """Centralised authentication dependency (Phase 7.1).
+
+    Returns the authenticated, active user or raises ``AuthRequiredError``
+    (401 + ``AUTH_UNAUTHORIZED`` / ``AUTH_ACCOUNT_DISABLED``). Previously this
+    raised 404, which made an expired session indistinguishable from a missing
+    record and left the frontend unable to redirect to the login page.
+    """
+    return get_current_user()
 
 
 @copilot_bp.post("/api/v1/copilot/messages")

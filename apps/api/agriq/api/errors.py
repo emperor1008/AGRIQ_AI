@@ -5,8 +5,9 @@ are logged but never returned to the browser.
 """
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, redirect, request, url_for
 
+from ..core.constants import AUTH_UNAUTHORIZED
 from ..core.exceptions import AgriqError, InvalidCSRFError
 from ..core.logging import get_logger
 
@@ -23,10 +24,28 @@ def _wants_json() -> bool:
 
 @errors_bp.app_errorhandler(AgriqError)
 def handle_agriq_error(exc: AgriqError):
-    logger.warning("agriq_error type=%s path=%s", type(exc).__name__, request.path)
+    logger.warning("agriq_error type=%s path=%s code=%s", type(exc).__name__, request.path, exc.error_code)
     if _wants_json():
-        return jsonify({"ok": False, "error": exc.user_message}), exc.status_code
+        return jsonify({
+            "ok": False,
+            "error": exc.user_message,
+            # Phase 7.1: stable code so clients can distinguish 401/expired from
+            # 404/not-found without parsing prose.
+            "code": exc.error_code,
+        }), exc.status_code
     return exc.user_message, exc.status_code
+
+
+@errors_bp.app_errorhandler(401)
+def handle_401(_exc):
+    """Unauthenticated by Flask's own machinery (e.g. missing session)."""
+    if _wants_json():
+        return jsonify({
+            "ok": False,
+            "error": "Sign in to continue.",
+            "code": AUTH_UNAUTHORIZED,
+        }), 401
+    return redirect(url_for("auth.index"))
 
 
 @errors_bp.app_errorhandler(InvalidCSRFError)
@@ -37,8 +56,18 @@ def handle_csrf(exc: InvalidCSRFError):
 @errors_bp.app_errorhandler(404)
 def handle_404(_exc):
     if _wants_json():
-        return jsonify({"ok": False, "error": "Not found."}), 404
+        return jsonify({"ok": False, "error": "Not found.", "code": "NOT_FOUND"}), 404
     return "Page not found.", 404
+
+
+@errors_bp.app_errorhandler(405)
+def handle_405(_exc):
+    """A method mismatch on an HTML route is a navigation problem, not a crash:
+    send the user to the correct page instead of a bare 405 (Phase 7.1).
+    """
+    if _wants_json():
+        return jsonify({"ok": False, "error": "Method not allowed.", "code": "METHOD_NOT_ALLOWED"}), 405
+    return redirect(url_for("auth.index"))
 
 
 @errors_bp.app_errorhandler(413)
@@ -53,7 +82,7 @@ def handle_413(_exc):
 def handle_429(_exc):
     message = "Too many requests. Please slow down and try again shortly."
     if _wants_json():
-        return jsonify({"ok": False, "error": message}), 429
+        return jsonify({"ok": False, "error": message, "code": "AUTH_RATE_LIMITED"}), 429
     return message, 429
 
 
@@ -61,7 +90,7 @@ def handle_429(_exc):
 def handle_500(exc):
     logger.error("internal_error path=%s", request.path)
     if _wants_json():
-        return jsonify({"ok": False, "error": "An internal error occurred. Please try again."}), 500
+        return jsonify({"ok": False, "error": "An internal error occurred. Please try again.", "code": "INTERNAL_ERROR"}), 500
     return "An internal error occurred. Please try again.", 500
 
 

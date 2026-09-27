@@ -78,6 +78,35 @@ REQUIRED = [
     "docs/risk-evaluation.md",
     "docs/risk-api.md",
     "apps/web/static/js/risk-panel.js",
+    "apps/api/agriq/api/knowledge.py",
+    "apps/api/agriq/models/farming_knowledge.py",
+    "apps/api/agriq/repositories/farming_knowledge_repository.py",
+    "apps/api/agriq/services/farming_knowledge.py",
+    "apps/api/agriq/services/knowledge_safety.py",
+    "apps/api/agriq/i18n/__init__.py",
+    "apps/api/agriq/i18n/locales/en.json",
+    "apps/api/agriq/i18n/locales/or.json",
+    "apps/api/agriq/i18n/locales/hi.json",
+    "apps/api/agriq/integrations/knowledge/farming_import.py",
+    "apps/api/agriq/cli/import_farming_knowledge.py",
+    "apps/api/agriq/cli/review_knowledge.py",
+    "apps/api/migrations/versions/0008_farming_knowledge.py",
+    "apps/api/agriq/templates/knowledge/index.html",
+    "apps/api/agriq/templates/knowledge/detail.html",
+    "apps/api/agriq/templates/knowledge/_card.html",
+    "apps/api/agriq/templates/knowledge/_results.html",
+    "apps/web/static/js/i18n.js",
+    "apps/web/static/js/farming-techniques.js",
+    "apps/web/static/css/knowledge.css",
+    "data/farming_knowledge/dataset.json",
+    "scripts/check_knowledge_safety.py",
+    "docs/knowledge-architecture.md",
+    "docs/audits/PHASE7_2_KNOWLEDGE_AUDIT.md",
+    # Phase 7.3 — live weather/mandi reliability, states and verification.
+    "scripts/check_live_data.py",
+    "apps/api/tests/unit/test_provider_states.py",
+    "apps/api/tests/integration/test_live_data_provenance.py",
+    "docs/audits/PHASE7_3_LIVE_DATA_AUDIT.md",
     ".env.example",
     ".gitignore",
     "docker-compose.yml",
@@ -112,8 +141,22 @@ def main() -> int:
         if match:
             errors.append(f"Secret-like literal in {py.relative_to(ROOT)}")
 
+    # Front-end globals: the browser APIs are AgriqAPI / AgriqI18n / AGRIQ_* data
+    # blocks. A reference to `AGRIQ.api…` (lower-case member) can never resolve and
+    # used to throw on every dashboard load — catch the whole class here instead of
+    # discovering it in a console log.
+    bad_global = re.compile(r"\bAGRIQ\.[a-z]")
+    for js in (ROOT / "apps/web/static/js").glob("*.js"):
+        for number, line in enumerate(js.read_text(encoding="utf-8").splitlines(), 1):
+            match = bad_global.search(line)
+            if match:
+                errors.append(
+                    f"Unresolvable browser global {match.group(0)!r} in "
+                    f"{js.relative_to(ROOT)}:{number} (use AgriqAPI/AgriqI18n)"
+                )
+
     # CSS module split intact
-    for css in ["tokens", "base", "components", "dashboard", "animations", "responsive"]:
+    for css in ["tokens", "base", "components", "dashboard", "animations", "responsive", "knowledge"]:
         path = ROOT / "apps/web/static/css" / f"{css}.css"
         if not path.exists() or path.stat().st_size == 0:
             errors.append(f"CSS module missing/empty: {css}.css")
@@ -139,7 +182,7 @@ def main() -> int:
 
     print("AGRIQ AI validation PASSED")
     print(f"Checked {len(REQUIRED)} required files, {len(py_files)} Python modules, "
-          f"{len(LEGACY_ROUTES)} legacy routes, 6 CSS modules.")
+          f"{len(LEGACY_ROUTES)} legacy routes, 7 CSS modules.")
     return 0
 
 

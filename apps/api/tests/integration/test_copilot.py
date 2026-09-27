@@ -99,8 +99,10 @@ def _seed_source(status: str, key: str = "icar_test_advisory", crop: str = "Rice
 # ---------------------------------------------------------------------------
 
 def test_copilot_requires_authentication(client):
+    """Phase 7.1: an unauthenticated call is 401, never a silent 404."""
     response = client.post("/api/v1/copilot/messages", json={"question": "hi"})
-    assert response.status_code == 404
+    assert response.status_code == 401
+    assert response.get_json()["code"] == "AUTH_UNAUTHORIZED"
 
 
 def test_copilot_rejects_empty_question(onboarded_farmer):
@@ -129,13 +131,20 @@ def test_copilot_basic_turn_without_gemini(onboarded_farmer):
 
 
 def test_copilot_unavailable_weather_is_not_simulated(onboarded_farmer, monkeypatch):
-    """Provider failure → weather stays unavailable; no invented values."""
+    """Provider failure → weather stays unavailable; no invented values.
+
+    Phase 7.3: the classified fetch entry point is patched, so the test now also
+    proves the failure STATE (not just the missing value) reaches the copilot.
+    """
+    from agriq.core.constants import STATE_DATA_SOURCE_ERROR
     from agriq.services import weather_service
 
-    def fail_fetch(lat, lon):
-        return None
+    def fail_fetch(latitude, longitude, **kwargs):
+        return weather_service.open_meteo.unavailable(
+            "provider_request_failed", STATE_DATA_SOURCE_ERROR
+        )
 
-    monkeypatch.setattr(weather_service.open_meteo, "fetch_live_weather", fail_fetch)
+    monkeypatch.setattr(weather_service.open_meteo, "fetch_weather", fail_fetch)
     client = onboarded_farmer["client"]
     response = client.post("/api/v1/copilot/messages", json={
         "question": "Should I irrigate today?",

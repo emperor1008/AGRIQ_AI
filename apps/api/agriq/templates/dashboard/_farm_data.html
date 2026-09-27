@@ -264,13 +264,23 @@
             <h3>🛰️ Where each value comes from</h3>
         </div>
         <div>
+            {# Both chips render the REAL provider state (Phase 7.3). A failure is
+               never dressed up as data, and a healthy provider is never reported
+               as unavailable: the backend classifies each state and the wording
+               below names the actual cause. #}
             {% set weather = context.weather if context else none %}
+            {% set weather_state = (weather.state if weather and weather.state else 'DATA_UNAVAILABLE') %}
             <span class="data-source-chip {{ 'unavailable' if not (weather and weather.available) }}">
-                Weather: {{ weather.provider if weather and weather.available else 'Verified data is currently unavailable.' }}
-                {% if weather and weather.available %}• updated {{ weather.retrieved_at or 'recently' }}{% if weather.cached %} (cached){% endif %}{% endif %}
+                Weather: {% if weather and weather.available %}
+                    {{ weather.provider }}{% if weather.location_source == 'district_centre' %} (district centre){% endif %} • updated {{ weather.retrieved_at or 'recently' }}{% if weather.cached %} (cached){% endif %}{% if weather.stale or weather_state == 'DATA_STALE' %} • marked stale{% endif %}
+                {% else %}{{ (weather.state_message if weather and weather.state_message else 'Verified data is currently unavailable.') }}{% endif %}
             </span>
-            <span class="data-source-chip unavailable">
-                Mandi prices: {{ 'Official records shown when returned by data.gov.in.' if not (context and context.market and context.market.available) else 'Official records loaded.' }}
+            {% set market = context.market if context else none %}
+            {% set market_state = (market.state if market and market.state else 'DATA_UNAVAILABLE') %}
+            <span class="data-source-chip {{ 'unavailable' if not (market and market.available) }}">
+                Mandi prices: {% if market and market.record_count %}
+                    {{ market.record_count }} official record{{ '' if market.record_count == 1 else 's' }} stored{% if market.newest_arrival_date %} • newest arrival date {{ market.newest_arrival_date }}{% endif %} • {{ market_state }}
+                {% else %}{{ (market.state_message if market and market.state_message else 'Verified data is currently unavailable.') }}{% endif %}
             </span>
             <span class="data-source-chip">Soil: farmer-entered or lab report — never estimated.</span>
             <span class="data-source-chip">Map: district risk shown only after analysis; unanalysed districts await verified analysis.</span>

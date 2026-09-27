@@ -25,23 +25,45 @@ from pathlib import Path
 from typing import Any, Optional
 
 # Organisations permitted in the manifest. Ingestion rejects anything else.
+# Phase 7.2 extends the list additively with the international bodies and the
+# Indian regulatory offices the Farming Techniques dataset cites; nothing that
+# was allowed before is removed, so existing manifests keep validating.
 ALLOWED_ORGANISATIONS = {
     "ICAR",
     "ICAR-CIARI",
     "ICAR-IIRI",
     "ICAR-NRRI",
     "ICAR-CRRI",
+    "ICAR-IIHR",
+    "ICAR-IARI",
+    "ICAR-NRCB",
     "Department of Agriculture and Farmers' Empowerment, Government of Odisha",
     "Odisha University of Agriculture and Technology",
     "KVK Odisha",
     "Government of Odisha",
     "Government of India",
     "Ministry of Agriculture and Farmers Welfare",
+    # Phase 7.2 additions (regulatory, international, research).
+    "Directorate of Plant Protection, Quarantine and Storage",
+    "Central Insecticides Board and Registration Committee",
+    "National Horticulture Board",
+    "Food and Agriculture Organization of the United Nations",
+    "CABI",
+    "United States Department of Agriculture",
+    "CGIAR",
+    "International Rice Research Institute",
+    "Central Ground Water Board",
+    "Ministry of Jal Shakti",
+    "Tamil Nadu Agricultural University",
+    "NITI Aayog",
 }
 
 ALLOWED_DOCUMENT_TYPES = {
     "advisory", "package_of_practices", "pesticide_label", "research_paper",
     "extension_material", "government_circular", "newsletter",
+    # Phase 7.2 additions.
+    "handbook", "manual", "technical_bulletin", "product_information",
+    "historical_reference", "dataset",
 }
 
 ALLOWED_LANGUAGES = {"en", "hi", "or"}

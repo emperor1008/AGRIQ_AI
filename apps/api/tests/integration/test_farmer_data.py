@@ -46,7 +46,10 @@ def test_profile_create_get_patch(auth_client, csrf_token):
 
 
 def test_profile_requires_authentication(client):
-    assert client.get("/api/profile").status_code == 404
+    """Phase 7.1: 401 (not 404) so a client can tell "signed out" from "missing"."""
+    response = client.get("/api/profile")
+    assert response.status_code == 401
+    assert response.get_json()["code"] == "AUTH_UNAUTHORIZED"
 
 
 def test_profile_csrf_enforced(auth_client):

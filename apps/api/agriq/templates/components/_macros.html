@@ -1,6 +1,36 @@
+{# Phase 7.2: language switcher. A plain GET form, so it works with keyboard,
+   screen readers and with JavaScript disabled; the select submits itself when
+   scripting is available. ?lang=xx is resolved server-side and persisted in a
+   cookie, so the choice survives navigation across every mode. #}
+{% macro language_switcher(variant='') %}
+<form class="language-switcher {{ variant }}" method="get" action="">
+    {# Switching language keeps the reader where they were: every active
+       filter/search term travels with the choice (never the `lang` itself). #}
+    {% if request %}
+    {% for key, values in request.args.lists() %}
+    {% if key != 'lang' %}{% for value in values %}
+    <input type="hidden" name="{{ key }}" value="{{ value }}">
+    {% endfor %}{% endif %}
+    {% endfor %}
+    {% endif %}
+    <label class="sr-only" for="agriqLanguageSelect">{{ t('common.choose_language') }}</label>
+    <select id="agriqLanguageSelect" name="lang" class="language-select"
+            aria-label="{{ t('common.choose_language') }}" data-language-select>
+        {% for item in languages %}
+        <option value="{{ item.code }}" {% if item.code == language %}selected{% endif %} {% if item.code != 'en' %}lang="{{ item.html_lang }}"{% endif %}>
+            {{ item.native_name }}{% if item.code != 'en' %} ({{ item.english_name }}){% endif %}
+        </option>
+        {% endfor %}
+    </select>
+    <noscript><button type="submit">{{ t('common.choose_language') }}</button></noscript>
+</form>
+{% endmacro %}
+
 {% macro side_rail(user_mode) %}
 <aside class="side-rail {% if user_mode == 'student' %}student-rail{% else %}farmer-rail{% endif %}">
     <div class="rail-logo">{% if user_mode == "student" %}🎓{% else %}🌾{% endif %}</div>
+    {# Phase 7.2: Farming Techniques is reachable from both modes. #}
+    <a href="/farming-techniques" title="{{ t('knowledge.nav_label') }}">📖</a>
     {% if user_mode == "farmer" %}
     <a href="#map" title="GeoRisk Map">🗺️</a>
     <a href="#farmInput" title="Farm Input">⌨️</a>
@@ -32,6 +62,7 @@
         <div class="pill">{{ engine_mode }}</div>
         <div class="pill">{% if user_mode == "farmer" %}🌾 Farm Command{% else %}🎓 Research Lab{% endif %}</div>
         <div class="pill">{{ time }}</div>
+        {{ language_switcher('topbar-language-switcher') }}
         <a class="logout" href="/logout">Logout</a>
     </div>
 </header>
@@ -53,6 +84,7 @@
 
 {% macro section_launcher(user_mode) %}
 <nav class="section-launcher glass-panel" aria-label="Quick section opener">
+    <a href="/farming-techniques">📖<span>{{ t('knowledge.nav_label') }}</span></a>
     {% if user_mode == "farmer" %}
     <a href="#map">🗺️<span>Map</span></a>
     <a href="#farmInput">⌨️<span>Input</span></a>

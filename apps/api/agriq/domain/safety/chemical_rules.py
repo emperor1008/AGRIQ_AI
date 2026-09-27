@@ -70,6 +70,16 @@ def _any_match(text: str, patterns: tuple[str, ...]) -> list[str]:
     return hits
 
 
+def looks_like_dosage_request(question: str) -> bool:
+    """Public dosage-detection helper.
+
+    Exposed so the Phase 7.2 knowledge gate reuses *one* pattern set instead of
+    maintaining a second, drifting copy ("how much should I spray" must be
+    recognised identically everywhere in AGRIQ).
+    """
+    return bool(_any_match(question or "", _DOSAGE_PATTERNS))
+
+
 def check_chemical_request(
     question: str,
     *,
@@ -160,4 +170,4 @@ def check_chemical_request(
     return result
 
 
-__all__ = ["ChemicalSafetyResult", "check_chemical_request"]
+__all__ = ["ChemicalSafetyResult", "check_chemical_request", "looks_like_dosage_request"]
